@@ -1,0 +1,17 @@
+.klee-layout{
+  .klee-layout-header{
+    position: relative;
+    z-index: 1;
+    box-shadow: rgba(0, 0, 0, 0.15) 0 4px 10px 0;
+  }
+  &.klee-fixed-header{
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    .klee-layout-content{
+      flex: 1;
+      height: 100%;
+      overflow: auto;
+    }
+  }
+}

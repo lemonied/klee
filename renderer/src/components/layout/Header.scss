@@ -1,0 +1,38 @@
+@import "src/common/styles/variable";
+
+.glo-header{
+  height: 30px;
+  display: flex;
+  align-items: center;
+  .app-drag{
+    flex: 1;
+    -webkit-app-region: drag;
+    height: 100%;
+  }
+  .operation{
+    display: flex;
+    align-items: center;
+    height: 100%;
+    & > div{
+      padding: 0 12px;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color ease .2s;
+      font-size: 16px;
+    }
+    .minimize{
+      &:hover{
+        background: $color-background-l;
+        color: #ffffff;
+      }
+    }
+    .close{
+      &:hover{
+        background: $color-danger;
+        color: #ffffff;
+      }
+    }
+  }
+}
