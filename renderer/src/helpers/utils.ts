@@ -16,3 +16,7 @@ export function combineClassNames(...args: (string | null | undefined)[]) {
   });
   return classNames.join(' ');
 }
+
+export function randomStr(prefix: string, length = 5) {
+  return `${prefix}_${Math.random().toString(36).slice(2, 2 + length)}`;
+}

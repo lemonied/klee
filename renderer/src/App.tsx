@@ -1,23 +1,41 @@
-import React, { FC, useEffect, useState } from 'react';
-import { centralEventBus } from './helpers/eventbus';
+import React, { FC } from 'react';
 import './App.scss';
 import { Layout, Header } from './components';
+import { CSSTransition, TransitionGroup } from 'react-transition-group';
+import { useLocation, Switch, Route } from 'react-router-dom';
+import { routes } from './routes';
 
 const App: FC = () => {
-  const [base64, setBase64] = useState<string>();
-  useEffect(() => {
-    const subscription = centralEventBus.on('screenshot').subscribe(res => {
-      setBase64(res.message);
-    });
-    return () => subscription.unsubscribe();
-  }, []);
+  const location = useLocation();
+
   return (
     <Layout
       className={'root-app'}
       header={<Header />}
       fixed={true}
     >
-      <img src={`data:image/png;base64,${base64}`} alt=""/>
+      <TransitionGroup
+        className={'root-routes-group'}
+      >
+        <CSSTransition
+          classNames={'fade'}
+          timeout={300}
+          key={location.pathname}
+        >
+          <Switch location={location}>
+            {
+              routes.map(Item => (
+                <Route
+                  exact={ Item.exact }
+                  path={ Item.path }
+                  key={ Item.path }
+                  component={ Item.Component }
+                />
+              ))
+            }
+          </Switch>
+        </CSSTransition>
+      </TransitionGroup>
     </Layout>
   );
 };

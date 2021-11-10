@@ -8,18 +8,18 @@ export const centralEventBus = {
       const listener = (event: any, message: any) => {
         subscriber.next({ event, message });
       };
-      globalEvents.on(channel, listener);
+      globalEvents?.on(channel, listener);
       return {
         unsubscribe() {
-          globalEvents.removeListener(channel, listener);
+          globalEvents?.removeListener(channel, listener);
         },
       };
     });
   },
   emit: (channel: string, data?: any) => {
-    globalEvents.send(channel, data);
+    globalEvents?.send(channel, data);
   },
   clearAll: (channel?: string) => {
-    globalEvents.removeAllListeners(channel);
+    globalEvents?.removeAllListeners(channel);
   },
 };
