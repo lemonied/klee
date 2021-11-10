@@ -9,10 +9,12 @@ import {
 import { Link } from 'react-router-dom';
 import { SnapshotModal, SnapshotModalInstance } from '../snapshot-modal/SnapshotModal';
 import './index.scss';
+import { Picker, PickerInstance } from '../picker/Picker';
 
 const Home: FC = () => {
 
   const modalRef = useRef<SnapshotModalInstance>();
+  const pickerRef = useRef<PickerInstance>();
 
   return (
     <>
@@ -23,7 +25,7 @@ const Home: FC = () => {
           </Link>
         </p>
         <div>
-          <span onClick={() => modalRef.current?.show()}>
+          <span onClick={modalRef.current?.show}>
             <Avatar
               className={'link'}
               size={'large'}
@@ -33,7 +35,8 @@ const Home: FC = () => {
           </span>
         </div>
       </div>
-      <SnapshotModal ref={modalRef} />
+      <SnapshotModal ref={modalRef} onChange={pickerRef.current?.show} />
+      <Picker ref={pickerRef} />
     </>
   );
 };

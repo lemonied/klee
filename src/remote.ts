@@ -33,6 +33,9 @@ async function onScreenshot() {
 }
 
 function onWindowOperator(win: BrowserWindow) {
+  centralEventBus.on('focus').pipe(
+    tap(() => win.focus()),
+  ).subscribe();
   centralEventBus.on('hide').pipe(
     tap(() => win.hide()),
   ).subscribe();

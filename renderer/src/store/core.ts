@@ -32,12 +32,12 @@ interface InjectToken<S> {
 export const injectStore = <S>(namespace: string, defaultState: S): InjectToken<S> => {
   const token = randomStr(namespace);
   const SET_ACTION = Symbol(`SET_${token}`);
-  const reducer = (defaultStates: S = defaultState, action: any) => {
+  const reducer = (state: S = defaultState, action: any) => {
     switch (action.type) {
       case SET_ACTION:
         return action.value;
       default:
-        return defaultState;
+        return state;
     }
   };
   injectReducer(token, reducer);
@@ -57,7 +57,7 @@ export const useBee = <S>(token: InjectToken<S>): [InjectToken<S>['defaultState'
 };
 
 export const getBee = <S>(token: InjectToken<S>) => {
-  return store.getState().get(token) as InjectToken<S>['defaultState'];
+  return store.getState().get(token.token) as InjectToken<S>['defaultState'];
 };
 
 export const setBee = <S>(token: InjectToken<S>, value: InjectToken<S>['defaultState']): void => {
