@@ -1,6 +1,7 @@
 import { screenshot } from './processor';
 import { ipcMain, globalShortcut, app, BrowserWindow, WebContents } from 'electron';
 import { Observable, tap } from 'rxjs';
+import { randomStr } from './utils';
 
 class EventBus {
   webContents?: WebContents;
@@ -29,7 +30,10 @@ const centralEventBus = new EventBus();
 
 async function onScreenshot() {
   const buffer = await screenshot();
-  centralEventBus.emit('screenshot', buffer.toString('base64'));
+  centralEventBus.emit('screenshot', {
+    id: randomStr(),
+    base64: buffer.toString('base64'),
+  });
 }
 
 function onWindowOperator(win: BrowserWindow) {

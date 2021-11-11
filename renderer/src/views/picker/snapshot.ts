@@ -2,8 +2,13 @@ import {getBee, injectStore, setBee, useBee} from '../../store/core';
 import { centralEventBus } from '../../helpers/eventbus';
 import { List } from 'immutable';
 
-const snapshotToken = injectStore('snapshot', '');
-const snapshotsToken = injectStore<List<string>>('snapshots', List([]));
+interface Snapshot {
+  id: string;
+  base64: string;
+}
+
+const snapshotToken = injectStore<Snapshot | null>('snapshot', null);
+const snapshotsToken = injectStore<List<Snapshot>>('snapshots', List([]));
 
 centralEventBus.on('screenshot').subscribe(res => {
   setBee(snapshotToken, res.message);

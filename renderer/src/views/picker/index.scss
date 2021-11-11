@@ -4,4 +4,26 @@
   left: 0;
   right: 0;
   bottom: 0;
+  display: flex;
+  flex-direction: column;
+  .picker-content{
+    flex: 1;
+    overflow: hidden;
+  }
+  .picker-footer{
+    display: flex;
+    padding: 10px;
+    align-items: center;
+    .middle{
+      flex: 1;
+      padding: 0 20px;
+      p{
+        margin: 0;
+      }
+    }
+  }
+  .origin-image{
+    display: block;
+    width: 100%;
+  }
 }

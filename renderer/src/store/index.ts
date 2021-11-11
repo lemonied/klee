@@ -8,4 +8,4 @@ const args: [any, any?] = developTool && process.env.NODE_ENV === 'development' 
   [reducers, developTool()] :
   [reducers];
 
-export const store = createStore<Map<string, any>, Action<any>, any, any>(...args);
+export const store = createStore<Map<string, any>, Action, any, any>(...args);
