@@ -27,3 +27,34 @@
     width: 100%;
   }
 }
+.picker-preview-modal{
+  .content{
+    h2{
+      margin: 0;
+      padding: 10px;
+    }
+    p{
+      padding: 10px;
+      margin: 0;
+      span{
+        &:not(:last-child){
+          margin-right: 10px;
+        }
+      }
+    }
+    .image{
+      padding: 10px;
+      img{
+        border: 1px solid #d9d9d9;
+        border-radius: 3px;
+        overflow: hidden;
+        display: block;
+        max-width: 100%;
+        margin: 0 auto;
+      }
+    }
+  }
+  .footer{
+    border-top: 1px solid #f1f1f1;
+  }
+}

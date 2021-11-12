@@ -1,3 +1,5 @@
+import * as Buffer from 'buffer';
+
 export interface RGB {
   r: number;
   g: number;
@@ -14,3 +16,8 @@ export interface ImagePoint extends Point {
 }
 
 export type ImageVector = RGB[];
+
+export interface SnapshotItem {
+  id: string;
+  buffer: Buffer,
+}

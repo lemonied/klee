@@ -1,27 +1,57 @@
-import { ImagePoint, ImageVector, RGB } from './models';
+import { ImagePoint, ImageVector, RGB, SnapshotItem } from './models';
 import getPixels from 'get-pixels';
 import screenShotDesktop from 'screenshot-desktop';
 import { NdArray } from 'ndarray';
+import { randomStr } from './utils';
+import { centralEventBus } from './event-bus';
+
+const MAX_HISTORY_SIZE = 6;
+const SNAPSHOT_HISTORY: SnapshotItem[] = [];
+const SNAPSHOT_SELECTED: SnapshotItem[] = [];
+
+const addHistory = (value: SnapshotItem) => {
+  SNAPSHOT_HISTORY.push(value);
+  if (SNAPSHOT_HISTORY.length > MAX_HISTORY_SIZE) {
+    SNAPSHOT_HISTORY.shift();
+  }
+  centralEventBus.emit('history', SNAPSHOT_HISTORY.map((item) => {
+    return {
+      id: item.id,
+      base64: item.buffer.toString('base64'),
+    };
+  }));
+};
+export const addSelected = (value: string) => {
+  const history = SNAPSHOT_HISTORY.find(v => v.id === value);
+  if (history) {
+    SNAPSHOT_SELECTED.push(history);
+  }
+};
 
 /**
  * @description 全屏截图并返回图像信息
  * screen表示第n个屏幕，默认截取第一个
  */
 export async function screenshot(screen?: number) {
-  return await screenShotDesktop({ format: 'png', screen });
+  const ret = {
+    id: randomStr(),
+    buffer: await screenShotDesktop({ format: 'png', screen }),
+  };
+  addHistory(ret);
+  return ret;
 }
 
-export async function getScreenshotData() {
+export async function getImageData(snapshot: Buffer, type = 'png') {
   return await getPxData(
-    await screenshot(),
-    'image/png'
+    snapshot,
+    `image/${type}`
   );
 }
 
 /**
  * @description 返回图像的像素信息
  */
-export function getPxData(image: string | Buffer, type: string) {
+export function getPxData(image: string | Buffer, type = 'png') {
   return new Promise<NdArray>((resolve, reject) => {
     getPixels(image, type, (err, pixels) => {
       if (err) {

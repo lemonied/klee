@@ -10,12 +10,21 @@ import { useSnapshot } from './snapshot';
 import Cropper from 'cropperjs';
 import 'cropperjs/dist/cropper.css';
 import './index.scss';
-import { Button } from 'antd';
+import { Button, Modal } from 'antd';
 import { centralEventBus } from '../../helpers/eventbus';
 import { Subscription } from 'rxjs';
 
-interface Props {
+export interface CropperData {
+  id: string;
+  base64: string;
+  width: number;
+  height: number;
+  left: number;
+  top: number;
+}
 
+interface Props {
+  onSubmit?(data: CropperData): void;
 }
 
 export interface PickerInstance {
@@ -24,8 +33,12 @@ export interface PickerInstance {
 }
 
 const Picker = forwardRef<PickerInstance | undefined, Props>((props, ref) => {
+  const { onSubmit } = props;
+
   const snapshot = useSnapshot();
   const [visible, setVisible] = useState(false);
+  const [previewVisible, setPreviewVisible] = useState(false);
+  const [cropperData, setCropperData] = useState<CropperData | null>(null);
   const cropperRef = useRef<Cropper>();
   const imageRef = useRef<HTMLImageElement>(null);
 
@@ -41,6 +54,10 @@ const Picker = forwardRef<PickerInstance | undefined, Props>((props, ref) => {
         minCanvasHeight: imageRef.current!.clientHeight,
         minCropBoxWidth: 50,
         minCropBoxHeight: 50,
+        data: {
+          width: 200,
+          height: 200,
+        },
       });
     }
   }, []);
@@ -77,30 +94,37 @@ const Picker = forwardRef<PickerInstance | undefined, Props>((props, ref) => {
     return () => subscription?.unsubscribe();
   }, [visible]);
 
-  const submit = useCallback(() => {
-    setVisible(false);
-  }, []);
-
-  const getCroppedData = useCallback(() => {
+  const getCroppedData = useCallback<() => CropperData | null>(() => {
     const cropper = cropperRef.current;
     if (cropper) {
       const canvas = cropper.getCroppedCanvas();
       const crop  = cropper.getCropBoxData();
       return {
+        id: snapshot!.id,
         base64: canvas.toDataURL('image/png', 1),
-        width: crop.width,
-        height: crop.height,
-        left: crop.left,
-        top: crop.top,
+        width: Math.floor(crop.width),
+        height: Math.floor(crop.height),
+        left: Math.floor(crop.left),
+        top: Math.floor(crop.top),
       };
     }
     return null;
-  }, []);
+  }, [snapshot]);
+
+  const submit = useCallback(() => {
+    setVisible(false);
+    if (typeof onSubmit === 'function') {
+      const data = getCroppedData();
+      if (data) {
+        onSubmit(data);
+      }
+    }
+  }, [onSubmit, getCroppedData]);
 
   const preview = useCallback(() => {
     const data = getCroppedData();
-    // eslint-disable-next-line no-console
-    console.log(data);
+    setCropperData(data);
+    setPreviewVisible(true);
   }, [getCroppedData]);
 
   const minimize = useCallback(() => {
@@ -122,31 +146,66 @@ const Picker = forwardRef<PickerInstance | undefined, Props>((props, ref) => {
     return null;
   }
   return (
-    <div className={'snapshot-picker'}>
-      <div className={'picker-content'}>
+    <>
+      <div className={'snapshot-picker'}>
+        <div className={'picker-content'}>
+          {
+            snapshot ?
+              <img className={'origin-image'} ref={imageRef} src={`data:image/png;base64,${snapshot.base64}`} alt={'snapshot'}/> :
+              null
+          }
+        </div>
+        <div className={'picker-footer'}>
+          <div className={'left'}>
+            <Button onClick={() => setVisible(false)}>取消</Button>
+          </div>
+          <div className={'middle'}>
+            <p>
+              <span>请使用以上选择框框选技能图标（图片和选择框均可缩放、拖拽），然后点击完成，</span>
+              <span>你也可以在点击完成前<Button onClick={preview} type={'link'} size={'small'}>预览</Button>来查看框选结果；</span>
+              <span>或者<Button onClick={minimize} size={'small'} type={'link'}>最小化窗口</Button>后，重新截图；</span>
+              <span>也可以从<Button onClick={minimize} size={'small'} type={'link'}>历史记录</Button>中选择；</span>
+            </p>
+          </div>
+          <div className={'right'}>
+            <Button onClick={submit} type={'primary'}>完成</Button>
+          </div>
+        </div>
+      </div>
+      <Modal
+        title={null}
+        visible={previewVisible}
+        closable={false}
+        footer={null}
+        className={'picker-preview-modal'}
+        bodyStyle={{padding: 0}}
+      >
         {
-          snapshot ?
-            <img className={'origin-image'} ref={imageRef} src={`data:image/png;base64,${snapshot.base64}`} alt={'snapshot'}/> :
-            null
+          cropperData && (
+            <div className={'content'}>
+              <h2>预览</h2>
+              <div className={'image'}>
+                <img src={cropperData.base64} alt="preview"/>
+              </div>
+              <p>
+                <span>x：{cropperData.left}</span>
+                <span>y：{cropperData.top}</span>
+                <span>width：{cropperData.width}</span>
+                <span>height：{cropperData.height}</span>
+              </p>
+            </div>
+          )
         }
-      </div>
-      <div className={'picker-footer'}>
-        <div className={'left'}>
-          <Button onClick={() => setVisible(false)}>取消</Button>
+        <div className={'footer'}>
+          <Button
+            block
+            type={'text'}
+            size={'large'}
+            onClick={() => setPreviewVisible(false)}
+          >关闭</Button>
         </div>
-        <div className={'middle'}>
-          <p>
-            <span>请使用以上选择框框选技能图标（图片和选择框均可缩放、拖拽），然后点击完成，</span>
-            <span>你也可以在点击完成前<Button onClick={preview} type={'link'} size={'small'}>预览</Button>来查看框选结果；</span>
-            <span>或者<Button onClick={minimize} size={'small'} type={'link'}>最小化窗口</Button>后，重新截图；</span>
-            <span>也可以从<Button onClick={minimize} size={'small'} type={'link'}>历史记录</Button>中选择；</span>
-          </p>
-        </div>
-        <div className={'right'}>
-          <Button onClick={submit} type={'primary'}>完成</Button>
-        </div>
-      </div>
-    </div>
+      </Modal>
+    </>
   );
 });
 

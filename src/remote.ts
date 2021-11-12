@@ -1,38 +1,19 @@
-import { screenshot } from './processor';
-import { ipcMain, globalShortcut, app, BrowserWindow, WebContents } from 'electron';
-import { Observable, tap } from 'rxjs';
-import { randomStr } from './utils';
-
-class EventBus {
-  webContents?: WebContents;
-  on(channel: string) {
-    return new Observable<{ event: any; message: any; }>(subscriber => {
-      const listener = (event: any, message: any) => {
-        subscriber.next({ event, message });
-      };
-      ipcMain.on(channel, listener);
-      return {
-        unsubscribe() {
-          ipcMain.removeListener(channel, listener);
-        },
-      };
-    });
-  }
-  emit(channel: string, data: any) {
-    this.webContents?.send(channel, data);
-  }
-  clearAll(channel: string) {
-    ipcMain.removeAllListeners(channel);
-  }
-}
-
-const centralEventBus = new EventBus();
+import { addSelected, screenshot } from './processor';
+import { globalShortcut, app, BrowserWindow } from 'electron';
+import { centralEventBus } from './event-bus';
+import { tap } from 'rxjs';
 
 async function onScreenshot() {
-  const buffer = await screenshot();
+  const snapshot = await screenshot();
   centralEventBus.emit('screenshot', {
-    id: randomStr(),
-    base64: buffer.toString('base64'),
+    id: snapshot.id,
+    base64: snapshot.buffer.toString('base64'),
+  });
+}
+
+function screenshotListener() {
+  centralEventBus.on('select').subscribe((e) => {
+    addSelected(e.message);
   });
 }
 
@@ -55,6 +36,7 @@ export function startChildProcess(win: BrowserWindow) {
   centralEventBus.webContents = win.webContents;
   globalShortcut.register('CommandOrControl+Alt+num0', onScreenshot);
   globalShortcut.register('CommandOrControl+Alt+0', onScreenshot);
+  screenshotListener();
   onWindowOperator(win);
   app.on('will-quit', () => {
     globalShortcut.unregisterAll();
