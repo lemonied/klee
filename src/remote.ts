@@ -1,7 +1,9 @@
-import { addSelected, screenshot } from './processor';
+import { addSelected, cutPicture, screenshot, setProcessList } from './processor';
+import { grayscale, rgb2hsv } from './picture';
 import { globalShortcut, app, BrowserWindow } from 'electron';
 import { centralEventBus } from './event-bus';
 import { tap } from 'rxjs';
+import { CropData } from './models';
 
 async function onScreenshot() {
   const snapshot = await screenshot();
@@ -12,8 +14,26 @@ async function onScreenshot() {
 }
 
 function screenshotListener() {
-  centralEventBus.on('select').subscribe((e) => {
-    addSelected(e.message);
+  centralEventBus.on('select').subscribe(async (e) => {
+    const crop = e.message as CropData;
+    const image = addSelected(crop);
+    if (image) {
+      try {
+        const rgb = await cutPicture(crop, image.buffer);
+        crop.rgb = rgb;
+        crop.grayscale = grayscale(rgb);
+        crop.hsv = rgb2hsv(rgb);
+        e.event.reply('select-reply', crop);
+      } catch (error) {
+        e.event.reply('select-reply', 'error');
+      }
+    } else {
+      e.event.reply('select-reply', 'error');
+    }
+  });
+  centralEventBus.on('process-list').subscribe(async (e) => {
+    await setProcessList(e.message);
+    e.event.reply('process-list-reply', 'success');
   });
 }
 

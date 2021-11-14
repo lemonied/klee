@@ -6,6 +6,12 @@ export interface RGB {
   b: number;
 }
 
+export interface HSV {
+  h: number;
+  s: number;
+  v: number;
+}
+
 export interface Point {
   x: number;
   y: number
@@ -20,4 +26,13 @@ export type ImageVector = RGB[];
 export interface SnapshotItem {
   id: string;
   buffer: Buffer,
+}
+
+export interface CropData {
+  id: string;
+  width: number;
+  height: number;
+  left: number;
+  top: number;
+  [prop: string]: any;
 }

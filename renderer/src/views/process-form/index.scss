@@ -1,0 +1,34 @@
+.process-form{
+  .link{
+    &:hover{
+      cursor: pointer;
+      opacity: .7;
+    }
+  }
+  .row{
+    padding: 5px 20px;
+    .line{
+      display: flex;
+      align-items: center;
+      min-height: 32px;
+      *{
+        &:not(:last-child){
+          margin-right: 10px;
+        }
+      }
+    }
+    .snapshot{
+      display: block;
+      img{
+        display: block;
+        border-radius: 5px;
+        border: 1px solid #d9d9d9;
+        max-width: 32px;
+      }
+    }
+  }
+  .flex-align-center{
+    display: flex;
+    align-items: center;
+  }
+}

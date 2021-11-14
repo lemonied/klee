@@ -21,6 +21,7 @@ export interface CropperData {
   height: number;
   left: number;
   top: number;
+  [prop: string]: any;
 }
 
 interface Props {
@@ -98,14 +99,14 @@ const Picker = forwardRef<PickerInstance | undefined, Props>((props, ref) => {
     const cropper = cropperRef.current;
     if (cropper) {
       const canvas = cropper.getCroppedCanvas();
-      const crop  = cropper.getCropBoxData();
+      const crop  = cropper.getData();
       return {
         id: snapshot!.id,
         base64: canvas.toDataURL('image/png', 1),
         width: Math.floor(crop.width),
         height: Math.floor(crop.height),
-        left: Math.floor(crop.left),
-        top: Math.floor(crop.top),
+        left: Math.floor(crop.x),
+        top: Math.floor(crop.y),
       };
     }
     return null;

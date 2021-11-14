@@ -5,7 +5,7 @@ class EventBus {
   webContents?: WebContents;
   on(channel: string) {
     return new Observable<{ event: any; message: any; }>(subscriber => {
-      const listener = (event: any, message: any) => {
+      const listener = (event: Electron.IpcMainEvent, message: any) => {
         subscriber.next({ event, message });
       };
       ipcMain.on(channel, listener);
