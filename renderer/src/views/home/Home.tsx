@@ -13,7 +13,7 @@ const Home: FC = () => {
   const [process] = useProcessList();
 
   const startProcess = useCallback(() => {
-    centralEventBus.emit('process-list', filterProcess(process)).subscribe(res => {
+    centralEventBus.emit('start-process', filterProcess(process)).subscribe(res => {
       // eslint-disable-next-line no-console
       console.log(res);
     });

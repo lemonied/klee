@@ -1,4 +1,11 @@
-import { addSelected, cutPicture, screenshot, setProcessList } from './processor';
+import {
+  addSelected,
+  cancelMouseListener,
+  cutPicture,
+  screenshot,
+  setProcessList,
+  startProcessList
+} from './processor';
 import { grayscale, rgb2hsv } from './picture';
 import { globalShortcut, app, BrowserWindow } from 'electron';
 import { centralEventBus } from './event-bus';
@@ -35,6 +42,13 @@ function screenshotListener() {
   centralEventBus.on('process-list').subscribe(async (e) => {
     await setProcessList(e.message);
     e.event.reply('process-list-reply', 'success');
+  });
+  centralEventBus.on('start-process').subscribe(async (e) => {
+    await startProcessList(e.message);
+    e.event.reply('start-process-reply', 'success');
+  });
+  centralEventBus.on('stop-process').subscribe((e) => {
+    cancelMouseListener();
   });
 }
 

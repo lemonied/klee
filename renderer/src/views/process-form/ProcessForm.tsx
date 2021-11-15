@@ -9,6 +9,7 @@ import {
   Select,
   InputNumber,
   AutoComplete,
+  Tooltip,
 } from 'antd';
 import {
   FileImageOutlined,
@@ -176,22 +177,26 @@ const FormRow: FC<FormRowProps> = (props) => {
                           style={{ width: 150 }}
                           options={getKeyOptions([...keyPath, k, 'key'])}
                         />
-                        <InputNumber
-                          min={0}
-                          step={1}
-                          value={v.get('keydown')}
-                          addonAfter={'毫秒'}
-                          style={{ width: 150 }}
-                          onChange={(value) => handleKeydown([...keyPath, k], value)}
-                        />
-                        <InputNumber
-                          min={0}
-                          step={1}
-                          value={v.get('keyup')}
-                          addonAfter={'毫秒'}
-                          style={{ width: 150 }}
-                          onChange={(value) => handleKeyup([...keyPath, k], value)}
-                        />
+                        <Tooltip title={`按下延迟，${v.get('keydown')}毫秒后按下${v.get('key')}`}>
+                          <InputNumber
+                            min={0}
+                            step={1}
+                            value={v.get('keydown')}
+                            addonAfter={'毫秒'}
+                            style={{ width: 150 }}
+                            onChange={(value) => handleKeydown([...keyPath, k], value)}
+                          />
+                        </Tooltip>
+                        <Tooltip title={`抬起延迟，${v.get('keyup')}毫秒后抬起${v.get('key')}`}>
+                          <InputNumber
+                            min={0}
+                            step={1}
+                            value={v.get('keyup')}
+                            addonAfter={'毫秒'}
+                            style={{ width: 150 }}
+                            onChange={(value) => handleKeyup([...keyPath, k], value)}
+                          />
+                        </Tooltip>
                       </div>
                     ) :
                     (
