@@ -4,26 +4,33 @@ import { List } from 'immutable';
 
 const MAX_HISTORY_SIZE = 6;
 
-interface Snapshot {
+export interface Snapshot {
   id: string;
+  timestamp: number;
   base64: string;
 }
 
 const snapshotToken = injectStore<Snapshot | null>('snapshot', null);
 const snapshotsToken = injectStore<List<Snapshot>>('snapshots', List([]));
 
-centralEventBus.on('screenshot').subscribe(res => {
-  setBee(snapshotToken, res.message);
+export const setSnapshotsHistory = (snapshot: Snapshot) => {
   let snapshots = getBee(snapshotsToken);
   if (snapshots.size >= MAX_HISTORY_SIZE) {
     snapshots = snapshots.shift();
   }
-  snapshots = snapshots.push(res.message);
+  snapshots = snapshots.push(snapshot);
   setBee(snapshotsToken, snapshots);
+};
+
+centralEventBus.on('screenshot').subscribe(res => {
+  setBee(snapshotToken, res.message);
+  setSnapshotsHistory(res.message);
 });
 
 export const useSnapshot = () => {
-  const [snapshot] = useBee(snapshotToken);
-  return snapshot;
+  return useBee(snapshotToken);
 };
 
+export const useSnapshotsHistory = () => {
+  return useBee(snapshotsToken);
+};

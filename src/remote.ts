@@ -9,6 +9,7 @@ async function onScreenshot() {
   const snapshot = await screenshot();
   centralEventBus.emit('screenshot', {
     id: snapshot.id,
+    timestamp: snapshot.timestamp,
     base64: snapshot.buffer.toString('base64'),
   });
 }

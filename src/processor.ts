@@ -44,6 +44,7 @@ export const setProcessList = async (value: any[]) => {
 export async function screenshot(screen?: number) {
   const ret = {
     id: randomStr(),
+    timestamp: Date.now(),
     buffer: await screenShotDesktop({ format: 'png', screen }),
   };
   addHistory(ret);

@@ -25,6 +25,7 @@ export type ImageVector = RGB[];
 
 export interface SnapshotItem {
   id: string;
+  timestamp: number;
   buffer: Buffer,
 }
 

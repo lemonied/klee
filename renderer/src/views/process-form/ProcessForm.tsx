@@ -8,6 +8,7 @@ import {
   Avatar,
   Select,
   InputNumber,
+  AutoComplete,
 } from 'antd';
 import {
   FileImageOutlined,
@@ -20,6 +21,7 @@ import { List, Map, fromJS } from 'immutable';
 import { centralEventBus } from '../../helpers/eventbus';
 import { useProcessList } from './process-list';
 import { average } from '../../helpers/utils';
+import { keyboardMap } from './keyboard';
 
 const { Option } = Select;
 
@@ -34,17 +36,15 @@ const ProcessForm: FC = () => {
   const onPicked = useCallback((data: CropperData) => {
     centralEventBus.emit('select', data).subscribe((res) => {
       const crop = res.message;
-      if (crop !== 'error') {
-        const lightness = average(crop.hsv.map((v: any) => v.v)).toFixed(4);
-        let target = list.setIn(
-          [...listRef.current!, 'crop'],
-          Object.assign(data, { lightness }));
-        target = target.setIn(
-          [...listRef.current!, 'conditions'],
-          fromJS([{ type: 'lightness', value: lightness, size: 'more' }]),
-        );
-        setList(target);
-      }
+      const lightness = average(crop.hsv.map((v: any) => v.v)).toFixed(4);
+      let target = list.setIn(
+        [...listRef.current!, 'crop'],
+        Object.assign(data, { lightness }));
+      target = target.setIn(
+        [...listRef.current!, 'conditions'],
+        fromJS([{ type: 'lightness', value: lightness, size: 'more' }]),
+      );
+      setList(target);
     });
   }, [list, setList]);
 
@@ -85,6 +85,9 @@ const FormRow: FC<FormRowProps> = (props) => {
       return value.push(Map({
         type: 'general',
         children: List([]),
+        key: '',
+        keydown: 5,
+        keyup: 5,
       }));
     }));
   }, [keyPath, originList, setList]);
@@ -93,6 +96,10 @@ const FormRow: FC<FormRowProps> = (props) => {
     if (value === 'general') {
       target = target.deleteIn([...path, 'crop']);
       target = target.deleteIn([...path, 'conditions']);
+    } else if (value === 'picker') {
+      target = target.deleteIn([...path, 'key']);
+      target = target.deleteIn([...path, 'keydown']);
+      target = target.deleteIn([...path, 'keyup']);
     }
     target = target.setIn([...path, 'type'], value);
     setList(target);
@@ -115,6 +122,34 @@ const FormRow: FC<FormRowProps> = (props) => {
     target = target.setIn([...keyPath, 'size'], value);
     setList(target);
   }, [originList, setList]);
+  // 按键
+  const handleKeyChange = useCallback((keyPath: any[], value: any) => {
+    let target = originList;
+    target = target.setIn([...keyPath, 'key'], value);
+    setList(target);
+  }, [originList, setList]);
+  const handleKeydown = useCallback((keyPath: any[], value: any) => {
+    let target = originList;
+    target = target.setIn([...keyPath, 'keydown'], value);
+    setList(target);
+  }, [originList, setList]);
+  const handleKeyup = useCallback((keyPath: any[], value: any) => {
+    let target = originList;
+    target = target.setIn([...keyPath, 'keyup'], value);
+    setList(target);
+  }, [originList, setList]);
+  const getKeyOptions = useCallback((keyPath: any[]) => {
+    const keyOptions = keyboardMap.map(v => ({ value: v }));
+    const value = originList.getIn(keyPath) as string;
+    if (!value) {
+      return keyOptions;
+    }
+    try {
+      return keyOptions.filter(v => new RegExp(value, 'ig').test(v.value));
+    } catch (err) {
+      return [];
+    }
+  }, [originList]);
   
   return (
     <>
@@ -122,7 +157,7 @@ const FormRow: FC<FormRowProps> = (props) => {
         list.map((v, k) => {
           return (
             <div className={'row'} key={k}>
-              <div className={'line'}>
+              <div className={'line line-space'}>
                 <Select
                   defaultValue={v.get('type')}
                   onChange={(e) => handleTypeChange([...keyPath, k], e)}
@@ -132,9 +167,35 @@ const FormRow: FC<FormRowProps> = (props) => {
                 </Select>
                 {
                   v.get('type') === 'general' ?
-                    null :
                     (
-                      <div className={'flex-align-center'}>
+                      <div className={'flex-align-center line-space'}>
+                        <AutoComplete
+                          placeholder={'输入按键'}
+                          value={v.get('key')}
+                          onChange={(e) => handleKeyChange([...keyPath, k], e)}
+                          style={{ width: 150 }}
+                          options={getKeyOptions([...keyPath, k, 'key'])}
+                        />
+                        <InputNumber
+                          min={0}
+                          step={1}
+                          value={v.get('keydown')}
+                          addonAfter={'毫秒'}
+                          style={{ width: 150 }}
+                          onChange={(value) => handleKeydown([...keyPath, k], value)}
+                        />
+                        <InputNumber
+                          min={0}
+                          step={1}
+                          value={v.get('keyup')}
+                          addonAfter={'毫秒'}
+                          style={{ width: 150 }}
+                          onChange={(value) => handleKeyup([...keyPath, k], value)}
+                        />
+                      </div>
+                    ) :
+                    (
+                      <div className={'flex-align-center line-space'}>
                         <span>if</span>
                         <div onClick={() => handleShowModal(k)} className={'snapshot link'}>
                           {
@@ -151,10 +212,11 @@ const FormRow: FC<FormRowProps> = (props) => {
                         <div className={'flex-align-center'}>
                           {
                             v.get('conditions')?.map((condition: any, index: number) => (
-                              <div className={'condition'} key={index}>
+                              <div className={'condition line-space'} key={index}>
                                 <Select
                                   defaultValue={condition.get('type')}
                                   onChange={(e) => handleConditionChange([...keyPath, k, 'conditions', index], e)}
+                                  style={{ minWidth: 100 }}
                                 >
                                   <Option value="lightness">明亮度</Option>
                                   <Option value="texture">纹理相似度</Option>
@@ -173,7 +235,7 @@ const FormRow: FC<FormRowProps> = (props) => {
                                       min={0}
                                       max={1}
                                       step={0.0001}
-                                      defaultValue={condition.get('value')}
+                                      value={condition.get('value')}
                                       onChange={(value) => handleConditionValueChange([...keyPath, k, 'conditions', index], value)}
                                     /> :
                                     null

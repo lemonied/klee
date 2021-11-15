@@ -6,7 +6,7 @@ import React, {
   useRef,
   useCallback,
 } from 'react';
-import { useSnapshot } from './snapshot';
+import { Snapshot, useSnapshot, useSnapshotsHistory } from './snapshot';
 import Cropper from 'cropperjs';
 import 'cropperjs/dist/cropper.css';
 import './index.scss';
@@ -33,12 +33,19 @@ export interface PickerInstance {
   hide(): void;
 }
 
+const DEFAULT_CROP_DATA = {
+  width: 200,
+  height: 200,
+};
+
 const Picker = forwardRef<PickerInstance | undefined, Props>((props, ref) => {
   const { onSubmit } = props;
 
-  const snapshot = useSnapshot();
+  const [snapshot, setSnapshot] = useSnapshot();
+  const [historySnapshots] = useSnapshotsHistory();
   const [visible, setVisible] = useState(false);
   const [previewVisible, setPreviewVisible] = useState(false);
+  const [historyVisible, setHistoryVisible] = useState(false);
   const [cropperData, setCropperData] = useState<CropperData | null>(null);
   const cropperRef = useRef<Cropper>();
   const imageRef = useRef<HTMLImageElement>(null);
@@ -55,28 +62,24 @@ const Picker = forwardRef<PickerInstance | undefined, Props>((props, ref) => {
         minCanvasHeight: imageRef.current!.clientHeight,
         minCropBoxWidth: 50,
         minCropBoxHeight: 50,
-        data: {
-          width: 200,
-          height: 200,
+        data: DEFAULT_CROP_DATA,
+        ready(event: Cropper.ReadyEvent<HTMLImageElement>) {
+          cropperRef.current?.setData(DEFAULT_CROP_DATA);
         },
       });
     }
   }, []);
 
   useEffect(() => {
-    if (snapshot) {
+    if (snapshot && visible) {
       setTimeout(() => {
         handleUrlChange(snapshot.base64);
       });
-    }
-  }, [snapshot, handleUrlChange]);
-
-  useEffect(() => {
-    if (!visible) {
+    } else if (!visible) {
       cropperRef.current?.destroy();
       cropperRef.current = undefined;
     }
-  }, [visible]);
+  }, [snapshot, handleUrlChange, visible]);
 
   useEffect(() => {
     return () => {
@@ -132,6 +135,11 @@ const Picker = forwardRef<PickerInstance | undefined, Props>((props, ref) => {
     centralEventBus.emit('minimize');
   }, []);
 
+  const handleHistorySelected = useCallback((screenshot: Snapshot) => {
+    setSnapshot(screenshot);
+    setHistoryVisible(false);
+  }, [setSnapshot]);
+
   useImperativeHandle(ref, () => {
     return {
       show() {
@@ -165,7 +173,7 @@ const Picker = forwardRef<PickerInstance | undefined, Props>((props, ref) => {
               <span>请使用以上选择框框选技能图标（图片和选择框均可缩放、拖拽），然后点击完成，</span>
               <span>你也可以在点击完成前<Button onClick={preview} type={'link'} size={'small'}>预览</Button>来查看框选结果；</span>
               <span>或者<Button onClick={minimize} size={'small'} type={'link'}>最小化窗口</Button>后，重新截图；</span>
-              <span>也可以从<Button onClick={minimize} size={'small'} type={'link'}>历史记录</Button>中选择；</span>
+              <span>也可以从<Button onClick={() => setHistoryVisible(true)} size={'small'} type={'link'}>历史记录</Button>中选择；</span>
             </p>
           </div>
           <div className={'right'}>
@@ -204,6 +212,28 @@ const Picker = forwardRef<PickerInstance | undefined, Props>((props, ref) => {
             size={'large'}
             onClick={() => setPreviewVisible(false)}
           >关闭</Button>
+        </div>
+      </Modal>
+      <Modal
+        title={'历史记录'}
+        visible={historyVisible}
+        closable={true}
+        onCancel={() => setHistoryVisible(false)}
+        footer={null}
+        className={'picker-history-modal'}
+        bodyStyle={{padding: 0}}
+      >
+        <div className={'history-list'}>
+          {
+            historySnapshots.map(v => {
+              return (
+                <div className={'img'} key={v.id}>
+                  <img onClick={() => handleHistorySelected(v)} src={`data:image/png;base64,${v.base64}`} alt="history"/>
+                  <p className={'time'}>{ new Date(v.timestamp).toLocaleString() }</p>
+                </div>
+              );
+            })
+          }
         </div>
       </Modal>
     </>
