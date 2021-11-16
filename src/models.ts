@@ -29,3 +29,22 @@ export interface CropData {
   top: number;
   [prop: string]: any;
 }
+
+export interface ProcessTypePicker {
+  type: 'picker';
+  crop?: CropData;
+  rgb?: RGB[];
+  grayscale?: number[];
+  hsv?: HSV[];
+  lightness?: number;
+  children: this[];
+}
+export interface ProcessTypeGeneral {
+  type: 'general';
+  key: string;
+  keydown: number;
+  keyup: number;
+  children: this[];
+}
+
+export type ProcessItem = ProcessTypePicker | ProcessTypeGeneral;

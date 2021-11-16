@@ -1,4 +1,4 @@
-import { CropData, SnapshotItem } from './models';
+import { CropData, SnapshotItem, ProcessItem } from './models';
 import { average, nextTick, randomStr, sleep } from './utils';
 import { centralEventBus } from './event-bus';
 import { cutPicture, grayscale, jimpScreenShot, rgb2hsv } from './picture';
@@ -8,7 +8,7 @@ import robot from 'robotjs';
 const MAX_HISTORY_SIZE = 6;
 const SNAPSHOT_HISTORY: SnapshotItem[] = [];
 let SNAPSHOT_SELECTED: SnapshotItem[] = [];
-let PROCESS_LIST: any[] = [];
+let PROCESS_LIST: ProcessItem[] = [];
 
 // 添加一个截图历史记录
 const addHistory = (value: SnapshotItem) => {
@@ -59,12 +59,12 @@ export async function screenshot() {
 
 export function handleProcessList() {
   const ids: string[] = [];
-  const loop = (list: any[]) => {
+  const loop = (list: ProcessItem[]) => {
     for (let i = 0; i < list.length; i++) {
       const v = list[i];
-      if (v.type === 'picker' && v.crop) {
+      if (v.type === 'picker' && v.crop && !v.rgb) {
         ids.push(v.crop.id);
-        const image = SNAPSHOT_SELECTED.find(img => img.id === v.crop.id);
+        const image = SNAPSHOT_SELECTED.find(img => v.crop!.id && v.crop!.id === img.id);
         if (image) {
           const rgb = cutPicture(v.crop, image.jimp.bitmap);
           const hsv = rgb2hsv(rgb);
@@ -138,7 +138,7 @@ function startProgress() {
     stop: false,
     cancel: null,
   };
-  const loop = async (list: any[]) => {
+  const loop = async (list: ProcessItem[]) => {
     if (token!.stop) throw 'loop stop';
     for (let i = 0; i < list.length; i++) {
       const v = list[i];
