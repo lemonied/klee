@@ -52,7 +52,7 @@ const Picker = forwardRef<PickerInstance | undefined, Props>((props, ref) => {
 
   const handleUrlChange = useCallback((url: string) => {
     if (cropperRef.current) {
-      cropperRef.current?.replace(`data:image/png;base64,${url}`);
+      cropperRef.current?.replace(`${url}`);
     } else if (imageRef.current) {
       cropperRef.current = new Cropper(imageRef.current!, {
         viewMode: 1,
@@ -160,7 +160,7 @@ const Picker = forwardRef<PickerInstance | undefined, Props>((props, ref) => {
         <div className={'picker-content'}>
           {
             snapshot ?
-              <img className={'origin-image'} ref={imageRef} src={`data:image/png;base64,${snapshot.base64}`} alt={'snapshot'}/> :
+              <img className={'origin-image'} ref={imageRef} src={`${snapshot.base64}`} alt={'snapshot'}/> :
               null
           }
         </div>
@@ -228,7 +228,7 @@ const Picker = forwardRef<PickerInstance | undefined, Props>((props, ref) => {
             historySnapshots.map(v => {
               return (
                 <div className={'img'} key={v.id}>
-                  <img onClick={() => handleHistorySelected(v)} src={`data:image/png;base64,${v.base64}`} alt="history"/>
+                  <img onClick={() => handleHistorySelected(v)} src={`${v.base64}`} alt="history"/>
                   <p className={'time'}>{ new Date(v.timestamp).toLocaleString() }</p>
                 </div>
               );

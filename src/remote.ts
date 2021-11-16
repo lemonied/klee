@@ -1,12 +1,11 @@
 import {
   addSelected,
   cancelMouseListener,
-  cutPicture,
   screenshot,
   setProcessList,
   startProcessList
 } from './processor';
-import { grayscale, rgb2hsv } from './picture';
+import { cutPicture, grayscale, rgb2hsv } from './picture';
 import { globalShortcut, app, BrowserWindow } from 'electron';
 import { centralEventBus } from './event-bus';
 import { tap } from 'rxjs';
@@ -17,17 +16,17 @@ async function onScreenshot() {
   centralEventBus.emit('screenshot', {
     id: snapshot.id,
     timestamp: snapshot.timestamp,
-    base64: snapshot.buffer.toString('base64'),
+    base64: snapshot.dataURL,
   });
 }
 
 function screenshotListener() {
-  centralEventBus.on('select').subscribe(async (e) => {
+  centralEventBus.on('select').subscribe((e) => {
     const crop = e.message as CropData;
     const image = addSelected(crop);
     if (image) {
       try {
-        const rgb = await cutPicture(crop, image.buffer);
+        const rgb = cutPicture(crop, image.jimp.bitmap);
         crop.rgb = rgb;
         crop.grayscale = grayscale(rgb);
         crop.hsv = rgb2hsv(rgb);

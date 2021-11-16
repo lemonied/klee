@@ -1,4 +1,5 @@
 import * as Buffer from 'buffer';
+import Jimp from 'jimp';
 
 export interface RGB {
   r: number;
@@ -12,21 +13,12 @@ export interface HSV {
   v: number;
 }
 
-export interface Point {
-  x: number;
-  y: number
-}
-
-export interface ImagePoint extends Point {
-  pixel: RGB;
-}
-
-export type ImageVector = RGB[];
-
 export interface SnapshotItem {
   id: string;
   timestamp: number;
   buffer: Buffer,
+  dataURL: string;
+  jimp: Jimp;
 }
 
 export interface CropData {

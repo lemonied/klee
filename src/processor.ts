@@ -1,8 +1,7 @@
-import { CropData, RGB, SnapshotItem } from './models';
-import screenShotDesktop from 'screenshot-desktop';
+import { CropData, SnapshotItem } from './models';
 import { average, nextTick, randomStr, sleep } from './utils';
 import { centralEventBus } from './event-bus';
-import { getImageData, getRGB, grayscale, rgb2hsv } from './picture';
+import { cutPicture, grayscale, jimpScreenShot, rgb2hsv } from './picture';
 import ioHook from 'iohook';
 import robot from 'robotjs';
 
@@ -34,9 +33,9 @@ export const addSelected = (value: CropData) => {
   return null;
 };
 // 设置流程
-export const setProcessList = async (value: any[]) => {
+export const setProcessList = (value: any[]) => {
   PROCESS_LIST = value;
-  await handleProcessList();
+  handleProcessList();
 };
 // 设置并开启流程
 export const startProcessList = async (value: any[]) => {
@@ -44,62 +43,30 @@ export const startProcessList = async (value: any[]) => {
   startMouseListener();
 };
 
-/**
- * @description 全屏截图并返回图像信息
- * screen表示第n个屏幕，默认截取第一个
- */
-export async function screenshot(screen?: number) {
+export async function screenshot() {
+  const jimp = jimpScreenShot();
+  const buffer = await jimp.getBufferAsync('image/png');
   const ret = {
     id: randomStr(),
     timestamp: Date.now(),
-    buffer: await screenShotDesktop({ format: 'png', screen }),
+    jimp,
+    buffer,
+    dataURL: `data:image/png;base64,${buffer.toString('base64')}`,
   };
   addHistory(ret);
   return ret;
 }
 
-/**
- * @description 切割图片，宽高等分
- */
-const CUT_WIDTH = 8;
-const CUT_HEIGHT = 8;
-export async function cutPicture(crop: CropData, image: string | Buffer, type = 'png') {
-  const rgb: RGB[] = [];
-  const nd = await getImageData(image, type);
-  const perWidth = crop.width / CUT_WIDTH;
-  const perHeight = crop.height / CUT_HEIGHT;
-  for (let w = 0; w < CUT_WIDTH; w++) {
-    for (let h = 0; h < CUT_HEIGHT; h++) {
-      const block = [];
-      const x_start = crop.left + Math.floor(perWidth * w);
-      const x_end = Math.floor(crop.left + Math.floor(perWidth * (w + 1)));
-      for (let i = x_start; i <= x_end; i++) {
-        const y_start = crop.top + Math.floor(perHeight * h);
-        const y_end = Math.floor(crop.top + Math.floor(perHeight * (h + 1)));
-        for (let j = y_start; j <= y_end; j++) {
-          block.push(getRGB(nd, i, j));
-        }
-      }
-      rgb.push({
-        r: block.reduce((p, c) => p + c.r, 0) / block.length,
-        g: block.reduce((p, c) => p + c.g, 0) / block.length,
-        b: block.reduce((p, c) => p + c.b, 0) / block.length,
-      });
-    }
-  }
-  return rgb;
-}
-
-export async function handleProcessList() {
+export function handleProcessList() {
   const ids: string[] = [];
-  const loop = async (list: any[]) => {
+  const loop = (list: any[]) => {
     for (let i = 0; i < list.length; i++) {
       const v = list[i];
       if (v.type === 'picker' && v.crop) {
         ids.push(v.crop.id);
         const image = SNAPSHOT_SELECTED.find(img => img.id === v.crop.id);
         if (image) {
-          const rgb = await cutPicture(v.crop, image.buffer);
+          const rgb = cutPicture(v.crop, image.jimp.bitmap);
           const hsv = rgb2hsv(rgb);
           v.rgb = rgb;
           v.grayscale = grayscale(rgb);
@@ -107,10 +74,10 @@ export async function handleProcessList() {
           v.lightness = average(hsv.map(light => light.v));
         }
       }
-      await loop(v.children);
+      loop(v.children);
     }
   };
-  await loop(PROCESS_LIST);
+  loop(PROCESS_LIST);
   SNAPSHOT_SELECTED = SNAPSHOT_SELECTED.filter(v => ids.includes(v.id));
 }
 

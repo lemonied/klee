@@ -6,24 +6,21 @@
   "scripts": {
     "compile": "tsc",
     "start": "npm run compile && node open.js",
-    "rebuild": "npm rebuild iohook --runtime=electron&& electron-re0fbuild"
+    "rebuild": "npm rebuild iohook --runtime=electron&& electron-rebuild"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@types/get-pixels": "^3.3.1",
-    "@types/screenshot-desktop": "^1.12.0",
     "electron": "11.5.0",
     "electron-packager": "^15.4.0",
     "electron-rebuild": "^3.2.4",
     "typescript": "^4.4.4"
   },
   "dependencies": {
-    "get-pixels": "^3.3.3",
     "iohook": "^0.9.3",
+    "jimp": "^0.16.1",
     "robotjs": "^0.6.0",
-    "rxjs": "^7.4.0",
-    "screenshot-desktop": "^1.12.7"
+    "rxjs": "^7.4.0"
   },
   "engines": {
     "node": "14.18.1"
