@@ -17,7 +17,7 @@ const Home: FC = () => {
 
   const startProcess = useCallback(() => {
     setStartLoading(true);
-    centralEventBus.emit('start-process', filterProcess(process)).pipe(
+    centralEventBus.emit('start-process', filterProcess(process.toJS())).pipe(
       finalize(() => setStartLoading(false)),
     ).subscribe(res => {
       setProcessState(true);

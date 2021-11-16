@@ -145,8 +145,15 @@ function startProgress() {
       if (v.type === 'general' && v.key) {
         await sleep(v.keydown, c => token!.cancel = c);
         robot.keyToggle(v.key, 'down');
-        await sleep(v.keyup, c => token!.cancel = c);
-        robot.keyToggle(v.key, 'up');
+        try {
+          await sleep(v.keyup, c => token!.cancel = c);
+          robot.keyToggle(v.key, 'up');
+        } catch (e) {
+          robot.keyToggle(v.key, 'up');
+          throw e;
+        }
+      } else if (v.type === 'timeout') {
+        await sleep(v.value, c => token!.cancel = c);
       }
       await loop(v.children);
     }
@@ -162,6 +169,9 @@ function startProgress() {
     });
   };
   timeout();
+  if (process.env.NODE_ENV === 'development') {
+    console.log('start process');
+  }
   return () => {
     token!.stop = true;
     typeof token!.cancel === 'function' && token!.cancel();

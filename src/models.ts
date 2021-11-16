@@ -46,5 +46,10 @@ export interface ProcessTypeGeneral {
   keyup: number;
   children: this[];
 }
+export interface ProcessTypeTimeout {
+  type: 'timeout';
+  value: number;
+  children: this[];
+}
 
-export type ProcessItem = ProcessTypePicker | ProcessTypeGeneral;
+export type ProcessItem = ProcessTypePicker | ProcessTypeGeneral | ProcessTypeTimeout;

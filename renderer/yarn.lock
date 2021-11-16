@@ -2024,6 +2024,11 @@
   resolved "https://registry.nlark.com/@types/scheduler/download/@types/scheduler-0.16.2.tgz?cache=0&sync_timestamp=1629709281824&other_urls=https%3A%2F%2Fregistry.nlark.com%2F%40types%2Fscheduler%2Fdownload%2F%40types%2Fscheduler-0.16.2.tgz#1a62f89525723dde24ba1b01b092bf5df8ad4d39"
   integrity sha1-GmL4lSVyPd4kuhsBsJK/XfitTTk=
 
+"@types/sortablejs@^1.10.7":
+  version "1.10.7"
+  resolved "https://registry.nlark.com/@types/sortablejs/download/@types/sortablejs-1.10.7.tgz#ab9039c85429f0516955ec6dbc0bb20139417b15"
+  integrity sha1-q5A5yFQp8FFpVextvAuyATlBexU=
+
 "@types/source-list-map@*":
   version "0.1.2"
   resolved "https://registry.nlark.com/@types/source-list-map/download/@types/source-list-map-0.1.2.tgz?cache=0&sync_timestamp=1629709261080&other_urls=https%3A%2F%2Fregistry.nlark.com%2F%40types%2Fsource-list-map%2Fdownload%2F%40types%2Fsource-list-map-0.1.2.tgz#0078836063ffaf17412349bba364087e0ac02ec9"
@@ -9886,6 +9891,14 @@ react-scripts@4.0.3:
   optionalDependencies:
     fsevents "^2.1.3"
 
+react-sortablejs@^6.0.0:
+  version "6.0.0"
+  resolved "https://registry.nlark.com/react-sortablejs/download/react-sortablejs-6.0.0.tgz#ba75ded6dce3fa1b5b3b52c70d1928fcdee2003d"
+  integrity sha1-unXe1tzj+htbO1LHDRko/N7iAD0=
+  dependencies:
+    classnames "^2.2.6"
+    tiny-invariant "^1.1.0"
+
 react-transition-group@^4.4.2:
   version "4.4.2"
   resolved "https://registry.nlark.com/react-transition-group/download/react-transition-group-4.4.2.tgz#8b59a56f09ced7b55cbd53c36768b922890d5470"
@@ -10715,6 +10728,11 @@ sort-keys@^1.0.0:
   dependencies:
     is-plain-obj "^1.0.0"
 
+sortablejs@^1.14.0:
+  version "1.14.0"
+  resolved "https://registry.nlark.com/sortablejs/download/sortablejs-1.14.0.tgz#6d2e17ccbdb25f464734df621d4f35d4ab35b3d8"
+  integrity sha1-bS4XzL2yX0ZHNN9iHU811Ks1s9g=
+
 source-list-map@^2.0.0:
   version "2.0.1"
   resolved "https://registry.nlark.com/source-list-map/download/source-list-map-2.0.1.tgz#3993bd873bfc48479cca9ea3a547835c7c154b34"
@@ -11298,6 +11316,11 @@ tiny-invariant@^1.0.2:
   version "1.1.0"
   resolved "https://registry.nlark.com/tiny-invariant/download/tiny-invariant-1.1.0.tgz#634c5f8efdc27714b7f386c35e6760991d230875"
   integrity sha1-Y0xfjv3CdxS384bDXmdgmR0jCHU=
+
+tiny-invariant@^1.1.0:
+  version "1.2.0"
+  resolved "https://registry.npmmirror.com/tiny-invariant/download/tiny-invariant-1.2.0.tgz#a1141f86b672a9148c72e978a19a73b9b94a15a9"
+  integrity sha1-oRQfhrZyqRSMcul4oZpzublKFak=
 
 tiny-warning@^1.0.0, tiny-warning@^1.0.3:
   version "1.0.3"
