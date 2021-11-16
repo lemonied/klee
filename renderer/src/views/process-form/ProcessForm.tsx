@@ -21,13 +21,17 @@ import { Picker, PickerInstance, CropperData } from '../picker/Picker';
 import { List, Map, fromJS } from 'immutable';
 import { centralEventBus } from '../../helpers/eventbus';
 import { useProcessList } from './process-list';
-import { average } from '../../helpers/utils';
+import { average, combineClassNames } from '../../helpers/utils';
 import { keyboardMap } from './keyboard';
 
 const { Option } = Select;
 
-const ProcessForm: FC = () => {
+interface Props {
+  disabled?: boolean;
+}
+const ProcessForm: FC<Props> = (props) => {
 
+  const { disabled } = props;
   const [list, setList] = useProcessList();
   const listRef = useRef<any[]>();
 
@@ -60,6 +64,7 @@ const ProcessForm: FC = () => {
         <FormRow
           list={list}
           onShowModal={showModal}
+          disabled={disabled}
         />
       </div>
       <SnapshotModal ref={modalRef} onChange={pickerRef.current?.show} />
@@ -72,39 +77,46 @@ interface FormRowProps {
   list: List<any>;
   keyPath?: any[];
   onShowModal?(keyPath: any[]): void;
+  disabled?: boolean;
 }
 const FormRow: FC<FormRowProps> = (props) => {
-  const { keyPath = [], list, onShowModal } = props;
+  const { keyPath = [], list, onShowModal, disabled } = props;
   const [originList, setList] = useProcessList();
   const handleShowModal = useCallback((key: number) => {
     if (typeof onShowModal === 'function') {
       onShowModal([...keyPath, key]);
     }
   }, [keyPath, onShowModal]);
-  const addRow = useCallback(() => {
-    setList(originList.updateIn(keyPath, (value: any) => {
-      return value.push(Map({
-        type: 'general',
-        children: List([]),
+  const initRow = useCallback((type: string) => {
+    if (type === 'general') {
+      return Map({
+        type,
+        children: List<any>([]),
         key: '',
         keydown: 5,
         keyup: 5,
-      }));
-    }));
-  }, [keyPath, originList, setList]);
-  const handleTypeChange = useCallback((path: any[], value: string) => {
-    let target = originList;
-    if (value === 'general') {
-      target = target.deleteIn([...path, 'crop']);
-      target = target.deleteIn([...path, 'conditions']);
-    } else if (value === 'picker') {
-      target = target.deleteIn([...path, 'key']);
-      target = target.deleteIn([...path, 'keydown']);
-      target = target.deleteIn([...path, 'keyup']);
+      });
+    } else if (type === 'picker') {
+      return Map({
+        type,
+        children: List<any>([]),
+      });
+    } else {
+      return Map({
+        type,
+        value: 0,
+      });
     }
-    target = target.setIn([...path, 'type'], value);
-    setList(target);
-  }, [originList, setList]);
+    
+  }, []);
+  const addRow = useCallback(() => {
+    setList(originList.updateIn(keyPath, (value: any) => {
+      return value.push(initRow('general'));
+    }));
+  }, [initRow, keyPath, originList, setList]);
+  const handleTypeChange = useCallback((path: any[], value: string) => {
+    setList(originList.updateIn(path, () => initRow(value)));
+  }, [initRow, originList, setList]);
   // 条件类型
   const handleConditionChange = useCallback((keyPath: any[], value: string) => {
     let target = originList;
@@ -162,15 +174,17 @@ const FormRow: FC<FormRowProps> = (props) => {
                 <Select
                   defaultValue={v.get('type')}
                   onChange={(e) => handleTypeChange([...keyPath, k], e)}
+                  disabled={disabled}
                 >
-                  <Option value="general">一般流程</Option>
-                  <Option value="picker">条件流程</Option>
+                  <Option value="general">按键</Option>
+                  <Option value="picker">取色</Option>
                 </Select>
                 {
                   v.get('type') === 'general' ?
                     (
                       <div className={'flex-align-center line-space'}>
                         <AutoComplete
+                          disabled={disabled}
                           placeholder={'输入按键'}
                           value={v.get('key')}
                           onChange={(e) => handleKeyChange([...keyPath, k], e)}
@@ -179,6 +193,7 @@ const FormRow: FC<FormRowProps> = (props) => {
                         />
                         <Tooltip title={`按下延迟，${v.get('keydown')}毫秒后按下${v.get('key')}`}>
                           <InputNumber
+                            disabled={disabled}
                             min={0}
                             step={1}
                             value={v.get('keydown')}
@@ -189,6 +204,7 @@ const FormRow: FC<FormRowProps> = (props) => {
                         </Tooltip>
                         <Tooltip title={`抬起延迟，${v.get('keyup')}毫秒后抬起${v.get('key')}`}>
                           <InputNumber
+                            disabled={disabled}
                             min={0}
                             step={1}
                             value={v.get('keyup')}
@@ -202,12 +218,11 @@ const FormRow: FC<FormRowProps> = (props) => {
                     (
                       <div className={'flex-align-center line-space'}>
                         <span>if</span>
-                        <div onClick={() => handleShowModal(k)} className={'snapshot link'}>
+                        <div onClick={() => !disabled && handleShowModal(k)} className={combineClassNames('snapshot link', disabled ? 'disabled' : null)}>
                           {
                             v.get('crop') ?
                               <img src={v.get('crop')?.base64} alt="snapshot"/> :
                               <Avatar
-                                className={'link'}
                                 size={'large'}
                                 shape={'square'}
                                 icon={<FileImageOutlined />}
@@ -219,6 +234,7 @@ const FormRow: FC<FormRowProps> = (props) => {
                             v.get('conditions')?.map((condition: any, index: number) => (
                               <div className={'condition line-space'} key={index}>
                                 <Select
+                                  disabled={disabled}
                                   defaultValue={condition.get('type')}
                                   onChange={(e) => handleConditionChange([...keyPath, k, 'conditions', index], e)}
                                   style={{ minWidth: 100 }}
@@ -228,6 +244,7 @@ const FormRow: FC<FormRowProps> = (props) => {
                                   <Option value="absolute">完全相似度</Option>
                                 </Select>
                                 <Select
+                                  disabled={disabled}
                                   defaultValue={condition.get('size')}
                                   onChange={(e) => handleSizeJudgment([...keyPath, k, 'conditions', index], e)}
                                 >
@@ -237,6 +254,7 @@ const FormRow: FC<FormRowProps> = (props) => {
                                 {
                                   condition.get('type') === 'lightness' ?
                                     <InputNumber
+                                      disabled={disabled}
                                       min={0}
                                       max={1}
                                       step={0.0001}
@@ -253,7 +271,7 @@ const FormRow: FC<FormRowProps> = (props) => {
                     )
                 }
               </div>
-              <FormRow list={v.get('children')} onShowModal={onShowModal} keyPath={[...keyPath, k, 'children']} />
+              <FormRow list={v.get('children')} disabled={disabled} onShowModal={onShowModal} keyPath={[...keyPath, k, 'children']} />
             </div>
           );
         })

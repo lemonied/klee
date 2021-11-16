@@ -38,8 +38,8 @@ export const setProcessList = (value: any[]) => {
   handleProcessList();
 };
 // 设置并开启流程
-export const startProcessList = async (value: any[]) => {
-  await setProcessList(value);
+export const startProcessList = (value: any[]) => {
+  setProcessList(value);
   startMouseListener();
 };
 

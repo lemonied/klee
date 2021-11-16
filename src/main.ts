@@ -28,14 +28,6 @@ async function createWindow() {
       await win.loadURL(`file:///${path.join(__dirname, '../dist/view/index.html')}`);
     } catch (e) { console.error(e); }
   }
-  win.webContents.addListener('before-input-event', (e, input) => {
-    if (input.type === 'keyDown' && input.code === 'F5') {
-      win.reload();
-    }
-    if (input.type === 'keyDown' && input.code === 'F12') {
-      win.webContents.openDevTools();
-    }
-  });
   return win;
 }
 

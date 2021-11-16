@@ -1,4 +1,4 @@
-import React, { FC, useCallback } from 'react';
+import React, { FC, useCallback, useState } from 'react';
 import {
   Button,
 } from 'antd';
@@ -7,17 +7,26 @@ import './index.scss';
 import { ProcessForm } from '../process-form/ProcessForm';
 import { useProcessList, filterProcess } from '../process-form/process-list';
 import { centralEventBus } from '../../helpers/eventbus';
+import { finalize } from 'rxjs';
 
 const Home: FC = () => {
 
   const [process] = useProcessList();
+  const [startLoading, setStartLoading] = useState(false);
+  const [processState, setProcessState] = useState(false);
 
   const startProcess = useCallback(() => {
-    centralEventBus.emit('start-process', filterProcess(process)).subscribe(res => {
-      // eslint-disable-next-line no-console
-      console.log(res);
+    setStartLoading(true);
+    centralEventBus.emit('start-process', filterProcess(process)).pipe(
+      finalize(() => setStartLoading(false)),
+    ).subscribe(res => {
+      setProcessState(true);
     });
   }, [process]);
+  const cancelProcess = useCallback(() => {
+    centralEventBus.emit('stop-process');
+    setProcessState(false);
+  }, []);
 
   return (
     <>
@@ -27,9 +36,13 @@ const Home: FC = () => {
             <Button>关于</Button>
           </Link>
         </p>
-        <ProcessForm />
-        <div className={''}>
-          <Button type={'primary'} onClick={startProcess}>启动</Button>
+        <ProcessForm disabled={processState} />
+        <div className={'process-operator'}>
+          {
+            processState ?
+              (<Button type={'default'} danger onClick={cancelProcess}>停止</Button>) :
+              (<Button type={'primary'} loading={startLoading} onClick={startProcess}>启动</Button>)
+          }
         </div>
       </div>
     </>

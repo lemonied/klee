@@ -38,13 +38,21 @@ function screenshotListener() {
       e.event.reply('select-reply', 'error');
     }
   });
-  centralEventBus.on('process-list').subscribe(async (e) => {
-    await setProcessList(e.message);
-    e.event.reply('process-list-reply', 'success');
+  centralEventBus.on('process-list').subscribe((e) => {
+    try {
+      setProcessList(e.message);
+      e.event.reply('process-list-reply', 'success');
+    } catch (error) {
+      e.event.reply('process-list-reply', 'error');
+    }
   });
-  centralEventBus.on('start-process').subscribe(async (e) => {
-    await startProcessList(e.message);
-    e.event.reply('start-process-reply', 'success');
+  centralEventBus.on('start-process').subscribe((e) => {
+    try {
+      startProcessList(e.message);
+      e.event.reply('start-process-reply', 'success');
+    } catch (error) {
+      e.event.reply('start-process-reply', 'error');
+    }
   });
   centralEventBus.on('stop-process').subscribe((e) => {
     cancelMouseListener();
@@ -64,6 +72,15 @@ function onWindowOperator(win: BrowserWindow) {
   centralEventBus.on('close').pipe(
     tap(() => win.close()),
   ).subscribe();
+  win.webContents.addListener('before-input-event', (e, input) => {
+    if (input.type === 'keyDown' && input.code === 'F5') {
+      cancelMouseListener();
+      win.reload();
+    }
+    if (input.type === 'keyDown' && input.code === 'F12') {
+      win.webContents.openDevTools();
+    }
+  });
 }
 
 export function startChildProcess(win: BrowserWindow) {

@@ -5,6 +5,10 @@
       opacity: .7;
     }
   }
+  .disabled{
+    opacity: .7;
+    cursor: not-allowed !important;
+  }
   .row{
     padding: 5px 20px;
     .line{
