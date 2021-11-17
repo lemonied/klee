@@ -55,7 +55,7 @@ export function grayscale(vector: RGB[]): number[] {
  */
 const CUT_WIDTH = 8;
 const CUT_HEIGHT = 8;
-export function cutPicture(crop: CropData, bitmap: Bitmap, type = 'png') {
+export function cutPicture(crop: CropData, bitmap: Bitmap): RGB[] {
   const rgb: RGB[] = [];
   const perWidth = crop.width / CUT_WIDTH;
   const perHeight = crop.height / CUT_HEIGHT;

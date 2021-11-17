@@ -18,7 +18,7 @@ const App: FC = () => {
         className={'root-routes-group'}
       >
         <CSSTransition
-          classNames={'fade'}
+          classNames={'route-fade'}
           timeout={300}
           key={location.pathname}
         >

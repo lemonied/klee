@@ -11,10 +11,10 @@ import {
   InputNumber,
   AutoComplete,
   Tooltip,
+  Checkbox,
 } from 'antd';
 import {
   FileImageOutlined,
-  PlusOutlined,
 } from '@ant-design/icons';
 import { SnapshotModal, SnapshotModalInstance } from '../snapshot-modal/SnapshotModal';
 import './index.scss';
@@ -40,18 +40,17 @@ const ProcessForm: FC<Props> = (props) => {
 
   const modalRef = useRef<SnapshotModalInstance>();
   const pickerRef = useRef<PickerInstance>();
-  const formRowRef = useRef<FormRowInstance>(null);
 
   const onPicked = useCallback((data: CropperData) => {
     centralEventBus.emit('select', data).subscribe((res) => {
       const crop = res.message;
-      const lightness = average(crop.hsv.map((v: any) => v.v)).toFixed(4);
       let target = list.setIn(
         [...listRef.current!, 'crop'],
-        Object.assign(data, { lightness }));
+        Map(crop),
+      );
       target = target.setIn(
         [...listRef.current!, 'conditions'],
-        fromJS([{ type: 'lightness', value: lightness, size: 'more' }]),
+        fromJS([{ type: 'lightness', value: crop.lightness, size: 'more' }]),
       );
       setList(target);
     });
@@ -69,11 +68,7 @@ const ProcessForm: FC<Props> = (props) => {
           list={list}
           onShowModal={showModal}
           disabled={disabled}
-          ref={formRowRef}
         />
-        <div className={'row'}>
-          <Button onClick={() => formRowRef.current?.addRow()} icon={<PlusOutlined />} />
-        </div>
       </div>
       <SnapshotModal ref={modalRef} onChange={pickerRef.current?.show} />
       <Picker onSubmit={onPicked} ref={pickerRef} />
@@ -89,18 +84,19 @@ interface FormRowProps {
   keyPath?: any[];
   onShowModal?(keyPath: any[]): void;
   disabled?: boolean;
+  level?: number;
 }
 const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
-  const { keyPath = [], list, onShowModal, disabled } = props;
+  const { keyPath = [], list, onShowModal, disabled, level = 1 } = props;
   const [originList, setList] = useProcessList();
   const handleShowModal = useCallback((key: number) => {
     if (typeof onShowModal === 'function') {
       onShowModal([...keyPath, key]);
     }
   }, [keyPath, onShowModal]);
-  const initRow = useCallback((type: string) => {
+  const initRow = useCallback((type: string, index: number | string) => {
     const row = {
-      id: randomStr('process_row'),
+      id: typeof index === 'number' ? randomStr(index, 6) : index,
       type,
     };
     if (type === 'general') {
@@ -111,23 +107,24 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
       });
     } else if (type === 'picker') {
       Object.assign(row, {
+        otherwise: false,
         children: List<any>([]),
       });
     } else {
       Object.assign(row, {
-        value: 0,
+        value: 50,
       });
     }
     return Map(row);
   }, []);
   const addRow = useCallback(() => {
     setList(originList.updateIn(keyPath, (value: any) => {
-      return value.push(initRow('general'));
+      return value.push(initRow('general', value.size));
     }));
   }, [initRow, keyPath, originList, setList]);
-  const handleTypeChange = useCallback((path: any[], value: string) => {
-    setList(originList.updateIn(path, () => initRow(value)));
-  }, [initRow, originList, setList]);
+  const handleTypeChange = useCallback((index: number, value: string) => {
+    setList(originList.updateIn([...keyPath, index], (uploader: any) => initRow(value, uploader.get('id'))));
+  }, [initRow, keyPath, originList, setList]);
   // 条件类型
   const handleConditionChange = useCallback((keyPath: any[], value: string) => {
     let target = originList;
@@ -162,6 +159,16 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
     target = target.setIn([...keyPath, 'keyup'], value);
     setList(target);
   }, [originList, setList]);
+  const handleValueChange = useCallback((keyPath: any[], value: any) => {
+    let target = originList;
+    target = target.setIn([...keyPath, 'value'], value);
+    setList(target);
+  }, [originList, setList]);
+  const handleElseChange = useCallback((keyPath: any[], value: any) => {
+    let target = originList;
+    target = target.setIn([...keyPath, 'otherwise'], value);
+    setList(target);
+  }, [originList, setList]);
   const getKeyOptions = useCallback((keyPath: any[]) => {
     const keyOptions = keyboardMap.map(v => ({ value: v }));
     const value = originList.getIn(keyPath) as string;
@@ -188,129 +195,185 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
   });
   
   return (
-    <>
-      <ReactSortable
-        setList={setSortableList}
-        list={sortableList}
-        group={'process-list'}
-        animation={200}
+    <div
+      className={`form-level form-level-${level % 2 === 1 ? 'odd' : 'even'}`}
+    >
+      <div
+        className={'form-level-content'}
       >
         {
-          list.map((v, k) => {
-            return (
-              <div className={'row'} key={v.id}>
-                <div className={'line line-space'}>
-                  <Select
-                    defaultValue={v.get('type')}
-                    onChange={(e) => handleTypeChange([...keyPath, k], e)}
-                    disabled={disabled}
-                  >
-                    <Option value="general">按键</Option>
-                    <Option value="picker">取色</Option>
-                  </Select>
-                  {
-                    v.get('type') === 'general' ?
-                      (
-                        <div className={'flex-align-center line-space'}>
-                          <AutoComplete
-                            disabled={disabled}
-                            placeholder={'输入按键'}
-                            value={v.get('key')}
-                            onChange={(e) => handleKeyChange([...keyPath, k], e)}
-                            style={{ width: 150 }}
-                            options={getKeyOptions([...keyPath, k, 'key'])}
-                          />
-                          <Tooltip title={`按下延迟，${v.get('keydown')}毫秒后按下${v.get('key')}`}>
-                            <InputNumber
-                              disabled={disabled}
-                              min={0}
-                              step={1}
-                              value={v.get('keydown')}
-                              addonAfter={'毫秒'}
-                              style={{ width: 150 }}
-                              onChange={(value) => handleKeydown([...keyPath, k], value)}
-                            />
-                          </Tooltip>
-                          <Tooltip title={`抬起延迟，${v.get('keyup')}毫秒后抬起${v.get('key')}`}>
-                            <InputNumber
-                              disabled={disabled}
-                              min={0}
-                              step={1}
-                              value={v.get('keyup')}
-                              addonAfter={'毫秒'}
-                              style={{ width: 150 }}
-                              onChange={(value) => handleKeyup([...keyPath, k], value)}
-                            />
-                          </Tooltip>
-                        </div>
-                      ) :
-                      (
-                        <div className={'flex-align-center line-space'}>
-                          <span>if</span>
-                          <div onClick={() => !disabled && handleShowModal(k)} className={combineClassNames('snapshot link', disabled ? 'disabled' : null)}>
-                            {
-                              v.get('crop') ?
-                                <img src={v.get('crop')?.base64} alt="snapshot"/> :
-                                <Avatar
-                                  size={'large'}
-                                  shape={'square'}
-                                  icon={<FileImageOutlined />}
-                                />
-                            }
-                          </div>
-                          <div className={'flex-align-center'}>
-                            {
-                              v.get('conditions')?.map((condition: any, index: number) => (
-                                <div className={'condition line-space'} key={index}>
-                                  <Select
-                                    disabled={disabled}
-                                    defaultValue={condition.get('type')}
-                                    onChange={(e) => handleConditionChange([...keyPath, k, 'conditions', index], e)}
-                                    style={{ minWidth: 100 }}
-                                  >
-                                    <Option value="lightness">明亮度</Option>
-                                    <Option value="texture">纹理相似度</Option>
-                                    <Option value="absolute">完全相似度</Option>
-                                  </Select>
-                                  <Select
-                                    disabled={disabled}
-                                    defaultValue={condition.get('size')}
-                                    onChange={(e) => handleSizeJudgment([...keyPath, k, 'conditions', index], e)}
-                                  >
-                                    <Option value="more">大于</Option>
-                                    <Option value="less">小于</Option>
-                                  </Select>
-                                  {
-                                    condition.get('type') === 'lightness' ?
+          list.size > 0 ? (
+            <ReactSortable
+              setList={setSortableList}
+              list={sortableList}
+              animation={200}
+              tag={'div'}
+            >
+              {
+                list.map((v, k) => {
+                  return (
+                    <div className={'row'} key={v.get('id')}>
+                      <div className={'line line-space'}>
+                        <Select
+                          defaultValue={v.get('type')}
+                          onChange={(e) => handleTypeChange(k, e)}
+                          disabled={disabled}
+                        >
+                          <Option value="general">按键</Option>
+                          <Option value="picker">取色</Option>
+                          <Option value="timeout">延时</Option>
+                        </Select>
+                        {
+                          (() => {
+                            switch (v.get('type')) {
+                              case 'general':
+                                return (
+                                  <div className={'flex-align-center line-space'}>
+                                    <AutoComplete
+                                      disabled={disabled}
+                                      placeholder={'输入按键'}
+                                      value={v.get('key')}
+                                      onChange={(e) => handleKeyChange([...keyPath, k], e)}
+                                      style={{ width: 150 }}
+                                      options={getKeyOptions([...keyPath, k, 'key'])}
+                                    />
+                                    <Tooltip title={`按下延迟，${v.get('keydown')}毫秒后按下${v.get('key')}`}>
                                       <InputNumber
                                         disabled={disabled}
                                         min={0}
-                                        max={1}
-                                        step={0.0001}
-                                        value={condition.get('value')}
-                                        onChange={(value) => handleConditionValueChange([...keyPath, k, 'conditions', index], value)}
-                                      /> :
-                                      null
-                                  }
-                                </div>
-                              ))
+                                        step={1}
+                                        value={v.get('keydown')}
+                                        addonAfter={'毫秒'}
+                                        style={{ width: 150 }}
+                                        onChange={(value) => handleKeydown([...keyPath, k], value)}
+                                      />
+                                    </Tooltip>
+                                    <Tooltip title={`抬起延迟，${v.get('keyup')}毫秒后抬起${v.get('key')}`}>
+                                      <InputNumber
+                                        disabled={disabled}
+                                        min={0}
+                                        step={1}
+                                        value={v.get('keyup')}
+                                        addonAfter={'毫秒'}
+                                        style={{ width: 150 }}
+                                        onChange={(value) => handleKeyup([...keyPath, k], value)}
+                                      />
+                                    </Tooltip>
+                                  </div>
+                                );
+                              case 'picker':
+                                return (
+                                  <div className={'flex-align-center line-space'}>
+                                    <span className={'conditional-text'}>if</span>
+                                    <div onClick={() => !disabled && handleShowModal(k)} className={combineClassNames('snapshot link', disabled ? 'disabled' : null)}>
+                                      {
+                                        v.get('crop') ?
+                                          <img src={v.getIn(['crop', 'base64'])} alt="snapshot"/> :
+                                          <Avatar
+                                            size={'large'}
+                                            shape={'square'}
+                                            icon={<FileImageOutlined />}
+                                          />
+                                      }
+                                    </div>
+                                    <div className={'flex-align-center line-space'}>
+                                      {
+                                        v.get('conditions')?.map((condition: any, index: number) => (
+                                          <div className={'condition line-space'} key={index}>
+                                            <Select
+                                              disabled={disabled}
+                                              defaultValue={condition.get('type')}
+                                              onChange={(e) => handleConditionChange([...keyPath, k, 'conditions', index], e)}
+                                              style={{ minWidth: 100 }}
+                                            >
+                                              <Option value="lightness">明亮度</Option>
+                                              <Option value="texture">纹理相似度</Option>
+                                              <Option value="absolute">完全相似度</Option>
+                                            </Select>
+                                            <Select
+                                              disabled={disabled}
+                                              defaultValue={condition.get('size')}
+                                              onChange={(e) => handleSizeJudgment([...keyPath, k, 'conditions', index], e)}
+                                            >
+                                              <Option value="more">大于</Option>
+                                              <Option value="less">小于</Option>
+                                            </Select>
+                                            {
+                                              condition.get('type') === 'lightness' ?
+                                                (
+                                                  <Tooltip
+                                                    title={'明亮度是指该裁剪区域的平均亮度，取值范围 0 ~ 1。'}
+                                                  >
+                                                    <InputNumber
+                                                      disabled={disabled}
+                                                      min={0}
+                                                      max={1}
+                                                      step={0.0001}
+                                                      value={condition.get('value')}
+                                                      onChange={(value) => handleConditionValueChange([...keyPath, k, 'conditions', index], value)}
+                                                    />
+                                                  </Tooltip>
+                                                ) :
+                                                null
+                                            }
+                                          </div>
+                                        ))
+                                      }
+                                      {
+                                        v.get('conditions') && (
+                                          <Tooltip
+                                            title={'勾选后，当前层级的下一个流程将执行else逻辑'}
+                                          >
+                                            <Checkbox
+                                              value={v.get('otherwise')}
+                                              onChange={value => handleElseChange([...keyPath, k], value)}
+                                            >
+                                              <span className={'conditional-text'}>else</span>
+                                            </Checkbox>
+                                          </Tooltip>
+                                        )
+                                      }
+                                    </div>
+                                  </div>
+                                );
+                              default:
+                                return (
+                                  <InputNumber
+                                    disabled={disabled}
+                                    min={50}
+                                    step={1}
+                                    addonAfter={'毫秒'}
+                                    value={v.get('value')}
+                                    onChange={(value) => handleValueChange([...keyPath, k], value)}
+                                  />
+                                );
                             }
-                          </div>
-                        </div>
-                      )
-                  }
-                </div>
-                {
-                  v.get('children') && (
-                    <FormRow list={v.get('children')} disabled={disabled} onShowModal={onShowModal} keyPath={[...keyPath, k, 'children']} />
-                  )
-                }
-              </div>
-            );
-          })
+                          })()
+                        }
+                      </div>
+                      {
+                        v.get('children') && (
+                          <FormRow
+                            level={level + 1}
+                            list={v.get('children')}
+                            disabled={disabled}
+                            onShowModal={onShowModal}
+                            keyPath={[...keyPath, k, 'children']}
+                          />
+                        )
+                      }
+                    </div>
+                  );
+                })
+              }
+            </ReactSortable>
+          ) : null
         }
-      </ReactSortable>
-    </>
+        <div className={'add-row'}>
+          <Button onClick={addRow} type={'dashed'} block size={'small'}>添加流程</Button>
+        </div>
+      </div>
+    </div>
   );
 });
 

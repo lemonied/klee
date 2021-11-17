@@ -20,6 +20,7 @@ export const filterProcess = (processList: any[]): any[] => {
       keydown: v.keydown,
       keyup: v.keyup,
       value: v.value,
+      otherwise: v.otherwise,
       crop,
       children: filterProcess(v.children),
     };

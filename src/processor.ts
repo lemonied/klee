@@ -1,4 +1,4 @@
-import { CropData, SnapshotItem, ProcessItem } from './models';
+import { SnapshotItem, ProcessItem, SharedWorkerData, CropData } from './models';
 import { average, nextTick, randomStr, sleep } from './utils';
 import { centralEventBus } from './event-bus';
 import { cutPicture, grayscale, jimpScreenShot, rgb2hsv } from './picture';
@@ -7,9 +7,15 @@ import robot from 'robotjs';
 
 const MAX_HISTORY_SIZE = 6;
 const SNAPSHOT_HISTORY: SnapshotItem[] = [];
-let SNAPSHOT_SELECTED: SnapshotItem[] = [];
 let PROCESS_LIST: ProcessItem[] = [];
+let sharedWorkerData: SharedWorkerData[] = [];
 
+export const getHistory = (crop: CropData) => {
+  if (crop.id) {
+    return SNAPSHOT_HISTORY.find(v => v.id === crop.id) || null;
+  }
+  return null;
+};
 // 添加一个截图历史记录
 const addHistory = (value: SnapshotItem) => {
   SNAPSHOT_HISTORY.push(value);
@@ -22,15 +28,6 @@ const addHistory = (value: SnapshotItem) => {
       base64: item.buffer.toString('base64'),
     };
   }));
-};
-// 选择截图完成后保存选择记录
-export const addSelected = (value: CropData) => {
-  const history = SNAPSHOT_HISTORY.find(v => v.id === value.id);
-  if (history) {
-    SNAPSHOT_SELECTED.push(history);
-    return history;
-  }
-  return null;
 };
 // 设置流程
 export const setProcessList = (value: any[]) => {
@@ -58,27 +55,22 @@ export async function screenshot() {
 }
 
 export function handleProcessList() {
-  const ids: string[] = [];
-  const loop = (list: ProcessItem[]) => {
+  sharedWorkerData = [];
+  const loop = (list: ProcessItem[], keyPath: number[] = []) => {
     for (let i = 0; i < list.length; i++) {
       const v = list[i];
-      if (v.type === 'picker' && v.crop && !v.rgb) {
-        ids.push(v.crop.id);
-        const image = SNAPSHOT_SELECTED.find(img => v.crop!.id && v.crop!.id === img.id);
-        if (image) {
-          const rgb = cutPicture(v.crop, image.jimp.bitmap);
-          const hsv = rgb2hsv(rgb);
-          v.rgb = rgb;
-          v.grayscale = grayscale(rgb);
-          v.hsv = hsv;
-          v.lightness = average(hsv.map(light => light.v));
+      if (v.type === 'picker') {
+        if (v.crop && v.crop.id) {
+          sharedWorkerData.push({
+            keyPath: [...keyPath, i],
+            crop: v.crop,
+          });
         }
+        loop(v.children, [...keyPath, i]);
       }
-      loop(v.children);
     }
   };
   loop(PROCESS_LIST);
-  SNAPSHOT_SELECTED = SNAPSHOT_SELECTED.filter(v => ids.includes(v.id));
 }
 
 // 流程循环控制
@@ -142,6 +134,10 @@ function startProgress() {
     if (token!.stop) throw 'loop stop';
     for (let i = 0; i < list.length; i++) {
       const v = list[i];
+      const last = list[i - 1];
+      if (last && last.type === 'picker' && last.otherwise && last.passed) {
+        continue;
+      }
       if (v.type === 'general' && v.key) {
         await sleep(v.keydown, c => token!.cancel = c);
         robot.keyToggle(v.key, 'down');
@@ -152,10 +148,13 @@ function startProgress() {
           robot.keyToggle(v.key, 'up');
           throw e;
         }
+      } else if (v.type === 'picker') {
+        if (v.passed) {
+          await loop(v.children);
+        }
       } else if (v.type === 'timeout') {
         await sleep(v.value, c => token!.cancel = c);
       }
-      await loop(v.children);
     }
     await nextTick();
   };

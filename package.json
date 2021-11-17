@@ -6,7 +6,7 @@
   "scripts": {
     "compile": "tsc",
     "start": "npm run compile && node open.js",
-    "rebuild": "npm rebuild iohook --runtime=electron&& electron-rebuild"
+    "rebuild": "npm rebuild iohook --runtime=electron && electron-rebuild"
   },
   "author": "",
   "license": "ISC",

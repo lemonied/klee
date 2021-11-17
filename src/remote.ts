@@ -1,5 +1,5 @@
 import {
-  addSelected,
+  getHistory,
   cancelMouseListener,
   screenshot,
   setProcessList,
@@ -10,6 +10,7 @@ import { globalShortcut, app, BrowserWindow } from 'electron';
 import { centralEventBus } from './event-bus';
 import { tap } from 'rxjs';
 import { CropData } from './models';
+import { average } from './utils';
 
 async function onScreenshot() {
   const snapshot = await screenshot();
@@ -23,13 +24,18 @@ async function onScreenshot() {
 function screenshotListener() {
   centralEventBus.on('select').subscribe((e) => {
     const crop = e.message as CropData;
-    const image = addSelected(crop);
+    const image = getHistory(crop);
     if (image) {
       try {
         const rgb = cutPicture(crop, image.jimp.bitmap);
-        crop.rgb = rgb;
-        crop.grayscale = grayscale(rgb);
-        crop.hsv = rgb2hsv(rgb);
+        const hsv = rgb2hsv(rgb);
+        const imageData = {
+          rgb,
+          grayscale: grayscale(rgb),
+          hsv,
+          lightness: parseFloat(average(hsv.map(light => light.v)).toFixed(4)),
+        };
+        Object.assign(crop, imageData);
         e.event.reply('select-reply', crop);
       } catch (error) {
         e.event.reply('select-reply', 'error');

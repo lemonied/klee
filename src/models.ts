@@ -22,21 +22,22 @@ export interface SnapshotItem {
 }
 
 export interface CropData {
-  id: string;
+  id?: string;
   width: number;
   height: number;
   left: number;
   top: number;
-  [prop: string]: any;
+  rgb?: RGB[];
+  grayscale?: number[];
+  hsv?: HSV[];
+  lightness?: number;
 }
 
 export interface ProcessTypePicker {
   type: 'picker';
   crop?: CropData;
-  rgb?: RGB[];
-  grayscale?: number[];
-  hsv?: HSV[];
-  lightness?: number;
+  passed?: boolean;
+  otherwise: boolean;
   children: this[];
 }
 export interface ProcessTypeGeneral {
@@ -44,12 +45,15 @@ export interface ProcessTypeGeneral {
   key: string;
   keydown: number;
   keyup: number;
-  children: this[];
 }
 export interface ProcessTypeTimeout {
   type: 'timeout';
   value: number;
-  children: this[];
 }
 
 export type ProcessItem = ProcessTypePicker | ProcessTypeGeneral | ProcessTypeTimeout;
+
+export interface SharedWorkerData {
+  keyPath: number[];
+  crop: CropData;
+}

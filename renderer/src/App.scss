@@ -7,22 +7,24 @@
   width: 100%;
   overflow-y: auto;
 }
-.fade-enter {
+.route-fade-enter {
   opacity: 0;
   position: absolute;
+  width: 100%;
 }
-.fade-enter-active {
+.route-fade-enter-active {
   opacity: 1;
   transition: opacity ease 300ms;
 }
-.fade-exit {
+.route-fade-exit {
   opacity: 1;
   position: absolute;
+  width: 100%;
 }
-.fade-exit-active {
+.route-fade-exit-active {
   opacity: 0;
   transition: opacity ease 300ms;
 }
-.fade-exit-done {
+.route-fade-exit-done {
   opacity: 0;
 }
