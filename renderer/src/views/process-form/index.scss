@@ -38,6 +38,19 @@
     opacity: .7;
     cursor: not-allowed !important;
   }
+  .sortable-handle{
+    font-size: 18px;
+    &:hover{
+      cursor: move;
+    }
+  }
+  .line-space{
+    & > *{
+      &:not(:last-child){
+        margin-right: 10px;
+      }
+    }
+  }
   .row{
     padding: 10px 10px;
     border-radius: 5px;
@@ -49,13 +62,6 @@
       display: flex;
       align-items: center;
       min-height: 32px;
-    }
-    .line-space{
-      & > *{
-        &:not(:last-child){
-          margin-right: 10px;
-        }
-      }
     }
     .snapshot{
       display: block;

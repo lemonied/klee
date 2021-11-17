@@ -22,7 +22,7 @@ export const filterProcess = (processList: any[]): any[] => {
       value: v.value,
       otherwise: v.otherwise,
       crop,
-      children: filterProcess(v.children),
+      children: v.children && filterProcess(v.children),
     };
   });
 };

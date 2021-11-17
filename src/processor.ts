@@ -1,9 +1,11 @@
 import { SnapshotItem, ProcessItem, SharedWorkerData, CropData } from './models';
-import { average, nextTick, randomStr, sleep } from './utils';
+import { nextTick, randomStr, sleep } from './utils';
 import { centralEventBus } from './event-bus';
-import { cutPicture, grayscale, jimpScreenShot, rgb2hsv } from './picture';
+import { jimpScreenShot } from './picture';
 import ioHook from 'iohook';
 import robot from 'robotjs';
+import { Worker } from 'worker_threads';
+import { resolve } from 'path';
 
 const MAX_HISTORY_SIZE = 6;
 const SNAPSHOT_HISTORY: SnapshotItem[] = [];
@@ -78,22 +80,23 @@ let processCancelToken: (() => void) | null = null;
 let listenerConfig = {
   type: 'press',
   button: 5,
+  workerDelay: 100,
 };
-ioHook.on('mousedown', (e) => {
+ioHook.on('mousedown', async (e) => {
   // 侧键2 -> 5, 侧键1 -> 4, 左键 -> 1, 右键 -> 2
   if (e.button === listenerConfig.button) {
     if (listenerConfig.type === 'press') {
-      cancelProcess();
+      await cancelProcess();
       processCancelToken = startProgress();
     } else {
-      toggleProgress();
+      await toggleProgress();
     }
   }
 });
-ioHook.on('mouseup', (e) => {
+ioHook.on('mouseup', async (e) => {
   // 侧键2 -> 5, 侧键1 -> 4, 左键 -> 1, 右键 -> 2
   if (listenerConfig.type === 'press' && e.button === listenerConfig.button) {
-    cancelProcess();
+    await cancelProcess();
   }
 });
 // 开始鼠标事件监听
@@ -102,20 +105,20 @@ function startMouseListener() {
   ioHook.start();
 }
 // 退出鼠标事件监听
-export function cancelMouseListener() {
+export async function cancelMouseListener() {
   ioHook.stop();
-  cancelProcess();
+  await cancelProcess();
 }
 // 退出流程循环
-function cancelProcess() {
+async function cancelProcess() {
   if (typeof processCancelToken ==='function') {
-    processCancelToken();
+    await processCancelToken();
     processCancelToken = null;
   }
 }
-function toggleProgress() {
+async function toggleProgress() {
   if (typeof processCancelToken ==='function') {
-    processCancelToken();
+    await processCancelToken();
     processCancelToken = null;
   } else {
     processCancelToken = startProgress();
@@ -168,11 +171,24 @@ function startProgress() {
     });
   };
   timeout();
+  let worker: Worker;
+  if (sharedWorkerData.length) {
+    worker = new Worker(resolve(__dirname, './worker'), {
+      workerData: {
+        timeout:
+        sharedWorkerData,
+      },
+    });
+    worker.on('message', (e) => {
+      console.log(e);
+    });
+  }
   if (process.env.NODE_ENV === 'development') {
     console.log('start process');
   }
-  return () => {
+  return async () => {
     token!.stop = true;
     typeof token!.cancel === 'function' && token!.cancel();
+    await worker?.terminate();
   };
 }

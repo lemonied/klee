@@ -1,6 +1,7 @@
 import React, {
   FC, forwardRef,
-  useCallback, useImperativeHandle,
+  useCallback,
+  useImperativeHandle,
   useMemo,
   useRef,
 } from 'react';
@@ -15,6 +16,7 @@ import {
 } from 'antd';
 import {
   FileImageOutlined,
+  DragOutlined,
 } from '@ant-design/icons';
 import { SnapshotModal, SnapshotModalInstance } from '../snapshot-modal/SnapshotModal';
 import './index.scss';
@@ -22,7 +24,7 @@ import { Picker, PickerInstance, CropperData } from '../picker/Picker';
 import { List, Map, fromJS } from 'immutable';
 import { centralEventBus } from '../../helpers/eventbus';
 import { useProcessList } from './process-list';
-import { average, combineClassNames } from '../../helpers/utils';
+import { combineClassNames } from '../../helpers/utils';
 import { keyboardMap } from './keyboard';
 import { ReactSortable } from 'react-sortablejs';
 import { randomStr } from '../../helpers/utils';
@@ -208,12 +210,14 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
               list={sortableList}
               animation={200}
               tag={'div'}
+              handle={`.sortable-handle-${level}`}
             >
               {
                 list.map((v, k) => {
                   return (
-                    <div className={'row'} key={v.get('id')}>
+                    <div className={'row line-space'} key={v.get('id')}>
                       <div className={'line line-space'}>
+                        <DragOutlined className={`sortable-handle sortable-handle-${level}`} />
                         <Select
                           defaultValue={v.get('type')}
                           onChange={(e) => handleTypeChange(k, e)}

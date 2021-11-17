@@ -60,8 +60,13 @@ function screenshotListener() {
       e.event.reply('start-process-reply', 'error');
     }
   });
-  centralEventBus.on('stop-process').subscribe((e) => {
-    cancelMouseListener();
+  centralEventBus.on('stop-process').subscribe(async (e) => {
+    try {
+      await cancelMouseListener();
+      e.event.reply('stop-process-reply', 'success');
+    } catch (error) {
+      e.event.reply('stop-process-reply', 'error');
+    }
   });
 }
 
@@ -78,10 +83,10 @@ function onWindowOperator(win: BrowserWindow) {
   centralEventBus.on('close').pipe(
     tap(() => win.close()),
   ).subscribe();
-  win.webContents.addListener('before-input-event', (e, input) => {
+  win.webContents.addListener('before-input-event', async (e, input) => {
     if (input.type === 'keyDown' && input.code === 'F5') {
-      cancelMouseListener();
       win.reload();
+      await cancelMouseListener();
     }
     if (input.type === 'keyDown' && input.code === 'F12') {
       win.webContents.openDevTools();
