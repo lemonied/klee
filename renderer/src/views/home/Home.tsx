@@ -12,20 +12,24 @@ import { finalize } from 'rxjs';
 const Home: FC = () => {
 
   const [process] = useProcessList();
-  const [startLoading, setStartLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [processState, setProcessState] = useState(false);
 
   const startProcess = useCallback(() => {
-    setStartLoading(true);
+    setLoading(true);
     centralEventbus.emit('start-process', filterProcess(process.toJS())).pipe(
-      finalize(() => setStartLoading(false)),
+      finalize(() => setLoading(false)),
     ).subscribe(res => {
       setProcessState(true);
     });
   }, [process]);
   const cancelProcess = useCallback(() => {
-    centralEventbus.emit('stop-process');
-    setProcessState(false);
+    setLoading(true);
+    centralEventbus.emit('stop-process').pipe(
+      finalize(() => setLoading(false)),
+    ).subscribe(res => {
+      setProcessState(false);
+    });
   }, []);
 
   return (
@@ -36,12 +40,12 @@ const Home: FC = () => {
             <Button>关于</Button>
           </Link>
         </p>
-        <ProcessForm disabled={processState} />
+        <ProcessForm disabled={processState || loading} />
         <div className={'process-operator'}>
           {
             processState ?
-              (<Button type={'default'} danger onClick={cancelProcess}>停止</Button>) :
-              (<Button type={'primary'} loading={startLoading} onClick={startProcess}>启动</Button>)
+              (<Button type={'default'} loading={loading} danger onClick={cancelProcess}>停止</Button>) :
+              (<Button type={'primary'} loading={loading} onClick={startProcess}>启动</Button>)
           }
         </div>
       </div>

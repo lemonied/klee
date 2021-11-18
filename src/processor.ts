@@ -1,5 +1,5 @@
 import { SnapshotItem, ProcessItem, SharedWorkerData, CropData } from './models';
-import { nextTick, randomStr, setIn, sleep } from './utils/utils';
+import { nextTick, randomStr, setIn, sleep, log } from './utils/utils';
 import { centralEventbus } from './utils/eventbus';
 import { jimpScreenShot } from './picture';
 import ioHook from 'iohook';
@@ -13,19 +13,19 @@ class Processor {
   PROCESS_LIST: ProcessItem[] = [];
   sharedWorkerData: SharedWorkerData[] = [];
   processCancelToken: (() => void) | null = null;
-  cancelChildProcess: (() => Promise<void>) | null = null;
-  listenerConfig = {
+  workerCancelToken: (() => void) | null = null;
+  config = {
     type: 'press',
     button: 5,
     workerDelay: 800,
   };
+  worker?: Worker;
   constructor() {
     ioHook.on('mousedown', (e) => {
       // 侧键2 -> 5, 侧键1 -> 4, 左键 -> 1, 右键 -> 2
-      if (e.button === this.listenerConfig.button) {
-        if (this.listenerConfig.type === 'press') {
-          this.cancelProcess();
-          this.processCancelToken = this.startProgress();
+      if (e.button === this.config.button) {
+        if (this.config.type === 'press') {
+          this.startProcessLoop();
         } else {
           this.toggleProgress();
         }
@@ -33,7 +33,7 @@ class Processor {
     });
     ioHook.on('mouseup', (e) => {
       // 侧键2 -> 5, 侧键1 -> 4, 左键 -> 1, 右键 -> 2
-      if (this.listenerConfig.type === 'press' && e.button === this.listenerConfig.button) {
+      if (this.config.type === 'press' && e.button === this.config.button) {
         this.cancelProcess();
       }
     });
@@ -56,14 +56,17 @@ class Processor {
       };
     }));
   };
+  // 保存流程列表
   setProcessList(value: any[]) {
     this.PROCESS_LIST = value;
-    this.handleProcessList();
+    this.formatProcessList();
   };
-  async startProcessList(value: any[]) {
+  // 开启流程监听
+  setAndStartListen(value: any[]) {
     this.setProcessList(value);
-    await this.startMouseListener();
-  };
+    this.startMouseListener();
+  }
+
   async screenshot() {
     const jimp = jimpScreenShot();
     const buffer = await jimp.getBufferAsync('image/png');
@@ -77,7 +80,8 @@ class Processor {
     this.addHistory(ret);
     return ret;
   }
-  handleProcessList() {
+  // 保存流程后格式化流程
+  formatProcessList() {
     this.sharedWorkerData = [];
     const loop = (list: ProcessItem[], keyPath: number[] = []) => {
       for (let i = 0; i < list.length; i++) {
@@ -97,62 +101,69 @@ class Processor {
     loop(this.PROCESS_LIST);
   }
 
-  async startMouseListener() {
-    if (typeof this.cancelChildProcess === 'function') {
-      await this.cancelChildProcess();
-      this.cancelChildProcess = null;
-    }
-    this.cancelChildProcess = this.startWorkerProcess();
-    this.listenerConfig.button = 5;
+  // 开始鼠标监听
+  startMouseListener() {
+    this.setWorkerProcess();
+    this.config.button = 5;
     ioHook.start();
   }
-
+  // 退出鼠标监听
   async cancelMouseListener() {
-    if (typeof this.cancelChildProcess === 'function') {
-      await this.cancelChildProcess();
-      this.cancelChildProcess = null;
-    }
-    ioHook.stop();
+    await this.worker?.terminate();
+    this.worker = undefined;
     this.cancelProcess();
+    ioHook.stop();
   }
 
+  // 开启流程循环
+  startProcessLoop() {
+    this.cancelProcess();
+    this.processCancelToken = this.startProgress();
+    this.workerCancelToken = this.startWorkerProcess();
+  }
+  // 退出流程循环
   cancelProcess() {
     if (typeof this.processCancelToken ==='function') {
       this.processCancelToken();
       this.processCancelToken = null;
     }
+    if (typeof this.workerCancelToken ==='function') {
+      this.workerCancelToken();
+      this.workerCancelToken = null;
+    }
   }
-
+  // 开启/关闭流程循环
   toggleProgress() {
-    if (typeof this.processCancelToken ==='function') {
-      this.processCancelToken();
-      this.processCancelToken = null;
+    if (this.processCancelToken || this.workerCancelToken) {
+      this.cancelProcess();
     } else {
-      this.processCancelToken = this.startProgress();
+      this.startProcessLoop();
     }
   }
 
+  // 一般流程循环
   startProgress() {
-    let token: {
-      stop: boolean;
-      cancel: null | (() => void);
-    } | null = {
-      stop: false,
-      cancel: null,
-    };
+    let stop: boolean | null = false;
+    let cancel: (() => void) | null = null;
     const loop = async (list: ProcessItem[]) => {
-      if (token!.stop) throw 'loop stop';
+      if (stop) throw 'loop stop';
       for (let i = 0; i < list.length; i++) {
         const v = list[i];
         const last = list[i - 1];
-        if (last && last.type === 'picker' && last.otherwise && last.passed) {
+        if (
+          last?.type === 'picker' && last.otherwise &&
+          (last.skip || last.passed)
+        ) {
+          if (v.type === 'picker' && v.otherwise) {
+            v.skip = true;
+          }
           continue;
         }
         if (v.type === 'general' && v.key) {
-          await sleep(v.keydown, c => token!.cancel = c);
+          await sleep(v.keydown, c => cancel = c);
           robot.keyToggle(v.key, 'down');
           try {
-            await sleep(v.keyup, c => token!.cancel = c);
+            await sleep(v.keyup, c => cancel = c);
             robot.keyToggle(v.key, 'up');
           } catch (e) {
             robot.keyToggle(v.key, 'up');
@@ -160,10 +171,11 @@ class Processor {
           }
         } else if (v.type === 'picker') {
           if (v.passed) {
+            v.skip = false;
             await loop(v.children);
           }
         } else if (v.type === 'timeout') {
-          await sleep(v.value, c => token!.cancel = c);
+          await sleep(v.value, c => cancel = c);
         }
       }
       await nextTick();
@@ -171,59 +183,50 @@ class Processor {
     const timeout = () => {
       loop(this.PROCESS_LIST).then(timeout).catch(error => {
         // stop
-        if (process.env.NODE_ENV === 'development') {
-          console.log(error);
-        }
-        token = null;
+        log(error);
+        cancel = null;
+        stop = null;
       });
     };
     timeout();
-    if (process.env.NODE_ENV === 'development') {
-      console.log('start process');
-    }
+    log('start process');
     return () => {
-      token!.stop = true;
-      typeof token!.cancel === 'function' && token!.cancel();
+      stop = true;
+      typeof cancel === 'function' && cancel();
     };
   }
-
+  // 图像分析循环
   startWorkerProcess() {
-    let sharedWorkerToken: {
-      worker?: Worker;
-      cancel?: (() => void) | null;
-    } | null = {};
+    let cancel: (() => void) | null = null;
+    const workerLoop = async () => {
+      const shot = jimpScreenShot();
+      this.worker?.postMessage(shot.bitmap);
+      await sleep(this.config.workerDelay, c => cancel = c);
+    };
+    log('worker start');
+    const timeout = () => {
+      workerLoop().then(timeout).catch(() => {
+        cancel = null;
+        log('worker stop');
+      });
+    };
     if (this.sharedWorkerData.length) {
-      const workerLoop = async () => {
-        const shot = jimpScreenShot();
-        sharedWorkerToken?.worker?.postMessage(shot.bitmap);
-        await sleep(this.listenerConfig.workerDelay, c => sharedWorkerToken!.cancel = c);
-      };
-      sharedWorkerToken.worker = new Worker(resolve(__dirname, './worker.js'), {
-        workerData: this.sharedWorkerData,
-      });
-      sharedWorkerToken.worker.on('message', (e) => {
-        setIn(this.PROCESS_LIST, e.keyPath, e.result);
-      });
-      if (process.env.NODE_ENV === 'development') {
-        console.log('worker start');
-      }
-      const timeout = () => {
-        workerLoop().then(timeout).catch(() => {
-          if (process.env.NODE_ENV === 'development') {
-            console.log('worker end');
-          }
-        });
-      };
       timeout();
     }
-    return async () => {
-      typeof sharedWorkerToken!.cancel === 'function' && sharedWorkerToken!.cancel();
-      await sharedWorkerToken?.worker?.terminate()
-      sharedWorkerToken = null;
-      if (process.env.NODE_ENV === 'development') {
-        console.log('worker terminate');
-      }
+    return () => {
+      typeof cancel === 'function' && cancel();
     };
+  }
+  // 开启多线程解析图像
+  setWorkerProcess() {
+   if (this.sharedWorkerData.length) {
+     this.worker = new Worker(resolve(__dirname, './worker.js'), {
+       workerData: this.sharedWorkerData,
+     });
+     this.worker.on('message', (e) => {
+       setIn(this.PROCESS_LIST, e.keyPath, e.result);
+     });
+   }
   }
 }
 

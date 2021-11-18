@@ -43,6 +43,7 @@ export interface ProcessTypePicker {
   type: 'picker';
   crop?: CropData;
   passed?: boolean;
+  skip?: boolean;
   otherwise: boolean;
   conditions: PickerCondition[];
   children: this[];

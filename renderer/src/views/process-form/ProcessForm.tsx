@@ -174,9 +174,10 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
     target = target.setIn([...keyPath, 'value'], value);
     setList(target);
   }, [originList, setList]);
-  const handleElseChange = useCallback((keyPath: any[], value: any) => {
+  // if else
+  const handleElseChange = useCallback((keyPath: any[], event: any) => {
     let target = originList;
-    target = target.setIn([...keyPath, 'otherwise'], value);
+    target = target.setIn([...keyPath, 'otherwise'], event.target.checked);
     setList(target);
   }, [originList, setList]);
   const getKeyOptions = useCallback((keyPath: any[]) => {
@@ -359,6 +360,7 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
                                             title={'勾选后，当前层级的下一个流程将执行else逻辑'}
                                           >
                                             <Checkbox
+                                              disabled={disabled}
                                               checked={v.get('otherwise')}
                                               onChange={value => handleElseChange([...keyPath, k], value)}
                                             >
@@ -403,9 +405,15 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
             </ReactSortable>
           ) : null
         }
-        <div className={'add-row'}>
-          <Button onClick={addRow} type={'dashed'} block size={'small'}>添加流程</Button>
-        </div>
+        {
+          disabled ?
+            null :
+            (
+              <div className={'add-row'}>
+                <Button onClick={addRow} type={'dashed'} block size={'small'}>添加流程</Button>
+              </div>
+            )
+        }
       </div>
     </div>
   );

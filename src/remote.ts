@@ -46,9 +46,9 @@ function screenshotListener() {
       e.event.reply('process-list-reply', 'error');
     }
   });
-  centralEventbus.on('start-process').subscribe(async (e) => {
+  centralEventbus.on('start-process').subscribe((e) => {
     try {
-      await processor.startProcessList(e.message);
+      processor.setAndStartListen(e.message);
       e.event.reply('start-process-reply', 'success');
     } catch (error) {
       e.event.reply('start-process-reply', 'error');
