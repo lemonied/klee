@@ -52,6 +52,10 @@ export function grayscale(vector: RGB[]): number[] {
   return vector.map(v => 0.3 * v.r + 0.59 * v.g + 0.11 * v.b);
 }
 
+export function lightness(rgb: RGB[]) {
+  return average(rgb2hsv(rgb).map(v => v.v));
+}
+
 /**
  * @description 切割图片，宽高等分
  */

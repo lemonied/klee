@@ -27,3 +27,16 @@ export function nextTick() {
     setImmediate(resolve);
   });
 }
+
+export function setIn(target: any, keyPath: Array<string | number>, value: any) {
+  if (target) {
+    const key = keyPath.splice(0, 1)[0];
+    if (key) {
+      if (keyPath.length && target[key]) {
+        setIn(target[key], keyPath, value);
+      } else {
+        target[key] = value;
+      }
+    }
+  }
+}

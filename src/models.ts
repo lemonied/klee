@@ -63,4 +63,5 @@ export type ProcessItem = ProcessTypePicker | ProcessTypeGeneral | ProcessTypeTi
 export interface SharedWorkerData {
   keyPath: number[];
   crop: CropData;
+  conditions: PickerCondition[];
 }

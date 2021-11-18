@@ -131,6 +131,14 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
   const handleConditionChange = useCallback((keyPath: any[], value: string) => {
     let target = originList;
     target = target.setIn([...keyPath, 'type'], value);
+    switch (value) {
+      case 'lightness':
+        target = target.setIn([...keyPath, 'value'], target.getIn([...keyPath.slice(0, -2), ...['crop', 'lightness']]) || 0);
+        break;
+      case 'texture':
+        target = target.setIn([...keyPath, 'value'], 70);
+        break;
+    }
     setList(target);
   }, [originList, setList]);
   // 条件值
@@ -303,22 +311,44 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
                                               <Option value="less">小于</Option>
                                             </Select>
                                             {
-                                              condition.get('type') === 'lightness' ?
-                                                (
-                                                  <Tooltip
-                                                    title={'明亮度是指该裁剪区域的平均亮度，取值范围 0 ~ 1。'}
-                                                  >
-                                                    <InputNumber
-                                                      disabled={disabled}
-                                                      min={0}
-                                                      max={1}
-                                                      step={0.0001}
-                                                      value={condition.get('value')}
-                                                      onChange={(value) => handleConditionValueChange([...keyPath, k, 'conditions', index], value)}
-                                                    />
-                                                  </Tooltip>
-                                                ) :
-                                                null
+                                              (() => {
+                                                switch (condition.get('type')) {
+                                                  case 'lightness':
+                                                    return (
+                                                      <Tooltip
+                                                        title={'明亮度是指该裁剪区域的平均亮度，取值范围 0 ~ 1。'}
+                                                      >
+                                                        <InputNumber
+                                                          disabled={disabled}
+                                                          min={0}
+                                                          max={1}
+                                                          step={0.0001}
+                                                          value={condition.get('value')}
+                                                          onChange={(value) => handleConditionValueChange([...keyPath, k, 'conditions', index], value)}
+                                                        />
+                                                      </Tooltip>
+                                                    );
+                                                  case 'texture':
+                                                    return (
+                                                      <Tooltip
+                                                        title={'纹理相似度是将灰度化后的图片进行对比，一般当相似度大于70%时，则认为两张图片相似'}
+                                                      >
+                                                        <InputNumber
+                                                          disabled={disabled}
+                                                          style={{ width: 150 }}
+                                                          min={0}
+                                                          max={100}
+                                                          step={1}
+                                                          value={condition.get('value')}
+                                                          onChange={(value) => handleConditionValueChange([...keyPath, k, 'conditions', index], value)}
+                                                          addonAfter={'%'}
+                                                        />
+                                                      </Tooltip>
+                                                    );
+                                                  default:
+                                                    return null;
+                                                }
+                                              })()
                                             }
                                           </div>
                                         ))
@@ -329,7 +359,7 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
                                             title={'勾选后，当前层级的下一个流程将执行else逻辑'}
                                           >
                                             <Checkbox
-                                              value={v.get('otherwise')}
+                                              checked={v.get('otherwise')}
                                               onChange={value => handleElseChange([...keyPath, k], value)}
                                             >
                                               <span className={'conditional-text'}>else</span>
