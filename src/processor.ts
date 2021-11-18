@@ -1,5 +1,5 @@
 import { SnapshotItem, ProcessItem, SharedWorkerData, CropData } from './models';
-import { nextTick, randomStr, sleep } from './utils';
+import { nextTick, randomStr, sleep } from './utils/utils';
 import { centralEventBus } from './event-bus';
 import { jimpScreenShot } from './picture';
 import ioHook from 'iohook';
@@ -82,43 +82,52 @@ let listenerConfig = {
   button: 5,
   workerDelay: 100,
 };
-ioHook.on('mousedown', async (e) => {
+ioHook.on('mousedown', (e) => {
   // 侧键2 -> 5, 侧键1 -> 4, 左键 -> 1, 右键 -> 2
   if (e.button === listenerConfig.button) {
     if (listenerConfig.type === 'press') {
-      await cancelProcess();
+      cancelProcess();
       processCancelToken = startProgress();
     } else {
-      await toggleProgress();
+      toggleProgress();
     }
   }
 });
-ioHook.on('mouseup', async (e) => {
+ioHook.on('mouseup', (e) => {
   // 侧键2 -> 5, 侧键1 -> 4, 左键 -> 1, 右键 -> 2
   if (listenerConfig.type === 'press' && e.button === listenerConfig.button) {
-    await cancelProcess();
+    cancelProcess();
   }
 });
 // 开始鼠标事件监听
 function startMouseListener() {
+  if (typeof cancelChildProcess === 'function') {
+    cancelChildProcess();
+    cancelChildProcess = null;
+  }
+  cancelChildProcess = startWorkerProcess();
   listenerConfig.button = 5;
   ioHook.start();
 }
 // 退出鼠标事件监听
-export async function cancelMouseListener() {
+export function cancelMouseListener() {
+  if (typeof cancelChildProcess === 'function') {
+    cancelChildProcess();
+    cancelChildProcess = null;
+  }
   ioHook.stop();
-  await cancelProcess();
+  cancelProcess();
 }
 // 退出流程循环
-async function cancelProcess() {
+function cancelProcess() {
   if (typeof processCancelToken ==='function') {
-    await processCancelToken();
+    processCancelToken();
     processCancelToken = null;
   }
 }
-async function toggleProgress() {
+function toggleProgress() {
   if (typeof processCancelToken ==='function') {
-    await processCancelToken();
+    processCancelToken();
     processCancelToken = null;
   } else {
     processCancelToken = startProgress();
@@ -171,24 +180,52 @@ function startProgress() {
     });
   };
   timeout();
-  let worker: Worker;
-  if (sharedWorkerData.length) {
-    worker = new Worker(resolve(__dirname, './worker'), {
-      workerData: {
-        timeout:
-        sharedWorkerData,
-      },
-    });
-    worker.on('message', (e) => {
-      console.log(e);
-    });
-  }
   if (process.env.NODE_ENV === 'development') {
     console.log('start process');
   }
-  return async () => {
+  return () => {
     token!.stop = true;
     typeof token!.cancel === 'function' && token!.cancel();
-    await worker?.terminate();
+  };
+}
+
+let cancelChildProcess: (() => void) | null;
+function startWorkerProcess() {
+  let sharedWorkerToken: {
+    worker?: Worker;
+    cancel?: (() => void) | null;
+  } | null = {};
+  if (sharedWorkerData.length) {
+    const workerLoop = async () => {
+      const shot = jimpScreenShot();
+      sharedWorkerToken?.worker?.postMessage(shot.bitmap);
+      await sleep(500, c => sharedWorkerToken!.cancel = c);
+    };
+    sharedWorkerToken.worker = new Worker(resolve(__dirname, './worker.js'), {
+      workerData: sharedWorkerData,
+    });
+    sharedWorkerToken.worker.on('message', (e) => {
+      console.log(e);
+    });
+    if (process.env.NODE_ENV === 'development') {
+      console.log('worker start');
+    }
+    const timeout = () => {
+      workerLoop().then(timeout).catch(() => {
+        if (process.env.NODE_ENV === 'development') {
+          console.log('worker end');
+        }
+      });
+    };
+    timeout();
+  }
+  return () => {
+    sharedWorkerToken?.worker?.terminate().then(() => {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('worker terminate');
+      }
+    });
+    typeof sharedWorkerToken!.cancel === 'function' && sharedWorkerToken!.cancel();
+    sharedWorkerToken = null;
   };
 }

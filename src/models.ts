@@ -33,11 +33,18 @@ export interface CropData {
   lightness?: number;
 }
 
+export interface PickerCondition {
+  type: 'lightness' | 'texture' | 'absolute';
+  value: number;
+  size: 'more' | 'less';
+}
+
 export interface ProcessTypePicker {
   type: 'picker';
   crop?: CropData;
   passed?: boolean;
   otherwise: boolean;
+  conditions: PickerCondition[];
   children: this[];
 }
 export interface ProcessTypeGeneral {

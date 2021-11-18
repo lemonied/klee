@@ -9,11 +9,7 @@ export const useProcessList = () => {
 
 export const filterProcess = (processList: any[]): any[] => {
   return processList.map((v: any) => {
-    let crop = v.crop;
-    if (crop) {
-      const { id, left, top, width, height } = crop;
-      crop = { id, left, top, width, height };
-    }
+    const crop = v.crop;
     return {
       type: v.type,
       key: v.key,
@@ -21,6 +17,7 @@ export const filterProcess = (processList: any[]): any[] => {
       keyup: v.keyup,
       value: v.value,
       otherwise: v.otherwise,
+      conditions: v.conditions,
       crop,
       children: v.children && filterProcess(v.children),
     };

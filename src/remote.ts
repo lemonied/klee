@@ -5,12 +5,11 @@ import {
   setProcessList,
   startProcessList
 } from './processor';
-import { cutPicture, grayscale, rgb2hsv } from './picture';
 import { globalShortcut, app, BrowserWindow } from 'electron';
 import { centralEventBus } from './event-bus';
 import { tap } from 'rxjs';
 import { CropData } from './models';
-import { average } from './utils';
+import { cutPicture, grayscale, rgb2hsv, average } from './utils/math';
 
 async function onScreenshot() {
   const snapshot = await screenshot();
@@ -29,9 +28,10 @@ function screenshotListener() {
       try {
         const rgb = cutPicture(crop, image.jimp.bitmap);
         const hsv = rgb2hsv(rgb);
+        const grayScale = grayscale(rgb)
         const imageData = {
           rgb,
-          grayscale: grayscale(rgb),
+          grayscale: grayScale,
           hsv,
           lightness: parseFloat(average(hsv.map(light => light.v)).toFixed(4)),
         };
@@ -60,13 +60,8 @@ function screenshotListener() {
       e.event.reply('start-process-reply', 'error');
     }
   });
-  centralEventBus.on('stop-process').subscribe(async (e) => {
-    try {
-      await cancelMouseListener();
-      e.event.reply('stop-process-reply', 'success');
-    } catch (error) {
-      e.event.reply('stop-process-reply', 'error');
-    }
+  centralEventBus.on('stop-process').subscribe((e) => {
+    cancelMouseListener();
   });
 }
 

@@ -2,10 +2,6 @@ export function randomStr(length = 6) {
   return Math.random().toString(36).slice(2, 2 + length);
 }
 
-export function average(list: number[]) {
-  return list.reduce((p, c) => p + c, 0) / list.length;
-}
-
 export function sleep(delay: number, cancel?: (timer: (() => void) | null) => void) {
   if (delay === 0) {
     return;
