@@ -1,13 +1,13 @@
 import { processor } from './processor';
 import { globalShortcut, app, BrowserWindow } from 'electron';
-import { centralEventBus } from './event-bus';
+import { centralEventbus } from './utils/eventbus';
 import { tap } from 'rxjs';
 import { CropData } from './models';
 import { cutPicture, grayscale, rgb2hsv, average } from './utils/math';
 
 async function onScreenshot() {
   const snapshot = await processor.screenshot();
-  centralEventBus.emit('screenshot', {
+  centralEventbus.emit('screenshot', {
     id: snapshot.id,
     timestamp: snapshot.timestamp,
     base64: snapshot.dataURL,
@@ -15,7 +15,7 @@ async function onScreenshot() {
 }
 
 function screenshotListener() {
-  centralEventBus.on('select').subscribe((e) => {
+  centralEventbus.on('select').subscribe((e) => {
     const crop = e.message as CropData;
     const image = processor.getHistory(crop);
     if (image) {
@@ -38,7 +38,7 @@ function screenshotListener() {
       e.event.reply('select-reply', 'error');
     }
   });
-  centralEventBus.on('process-list').subscribe((e) => {
+  centralEventbus.on('process-list').subscribe((e) => {
     try {
       processor.setProcessList(e.message);
       e.event.reply('process-list-reply', 'success');
@@ -46,7 +46,7 @@ function screenshotListener() {
       e.event.reply('process-list-reply', 'error');
     }
   });
-  centralEventBus.on('start-process').subscribe(async (e) => {
+  centralEventbus.on('start-process').subscribe(async (e) => {
     try {
       await processor.startProcessList(e.message);
       e.event.reply('start-process-reply', 'success');
@@ -54,7 +54,7 @@ function screenshotListener() {
       e.event.reply('start-process-reply', 'error');
     }
   });
-  centralEventBus.on('stop-process').subscribe(async (e) => {
+  centralEventbus.on('stop-process').subscribe(async (e) => {
     try {
       await processor.cancelMouseListener();
       e.event.reply('stop-process-reply', 'success');
@@ -65,16 +65,16 @@ function screenshotListener() {
 }
 
 function onWindowOperator(win: BrowserWindow) {
-  centralEventBus.on('focus').pipe(
+  centralEventbus.on('focus').pipe(
     tap(() => win.focus()),
   ).subscribe();
-  centralEventBus.on('hide').pipe(
+  centralEventbus.on('hide').pipe(
     tap(() => win.hide()),
   ).subscribe();
-  centralEventBus.on('minimize').pipe(
+  centralEventbus.on('minimize').pipe(
     tap(() => win.minimize()),
   ).subscribe();
-  centralEventBus.on('close').pipe(
+  centralEventbus.on('close').pipe(
     tap(() => win.close()),
   ).subscribe();
   win.webContents.addListener('before-input-event', async (e, input) => {
@@ -89,7 +89,7 @@ function onWindowOperator(win: BrowserWindow) {
 }
 
 export function startChildProcess(win: BrowserWindow) {
-  centralEventBus.webContents = win.webContents;
+  centralEventbus.webContents = win.webContents;
   globalShortcut.register('CommandOrControl+Alt+num0', onScreenshot);
   globalShortcut.register('CommandOrControl+Alt+0', onScreenshot);
   screenshotListener();

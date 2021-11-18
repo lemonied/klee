@@ -1,6 +1,6 @@
 import { SnapshotItem, ProcessItem, SharedWorkerData, CropData } from './models';
 import { nextTick, randomStr, setIn, sleep } from './utils/utils';
-import { centralEventBus } from './event-bus';
+import { centralEventbus } from './utils/eventbus';
 import { jimpScreenShot } from './picture';
 import ioHook from 'iohook';
 import robot from 'robotjs';
@@ -49,7 +49,7 @@ class Processor {
     if (this.SNAPSHOT_HISTORY.length > this.MAX_HISTORY_SIZE) {
       this.SNAPSHOT_HISTORY.shift();
     }
-    centralEventBus.emit('history', this.SNAPSHOT_HISTORY.map((item) => {
+    centralEventbus.emit('history', this.SNAPSHOT_HISTORY.map((item) => {
       return {
         id: item.id,
         base64: item.buffer.toString('base64'),

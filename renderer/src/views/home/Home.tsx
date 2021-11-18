@@ -6,7 +6,7 @@ import { Link } from 'react-router-dom';
 import './index.scss';
 import { ProcessForm } from '../process-form/ProcessForm';
 import { useProcessList, filterProcess } from '../process-form/process-list';
-import { centralEventBus } from '../../helpers/eventbus';
+import { centralEventbus } from '../../helpers/eventbus';
 import { finalize } from 'rxjs';
 
 const Home: FC = () => {
@@ -17,14 +17,14 @@ const Home: FC = () => {
 
   const startProcess = useCallback(() => {
     setStartLoading(true);
-    centralEventBus.emit('start-process', filterProcess(process.toJS())).pipe(
+    centralEventbus.emit('start-process', filterProcess(process.toJS())).pipe(
       finalize(() => setStartLoading(false)),
     ).subscribe(res => {
       setProcessState(true);
     });
   }, [process]);
   const cancelProcess = useCallback(() => {
-    centralEventBus.emit('stop-process');
+    centralEventbus.emit('stop-process');
     setProcessState(false);
   }, []);
 

@@ -1,5 +1,5 @@
 import {getBee, injectStore, setBee, useBee} from '../../store/core';
-import { centralEventBus } from '../../helpers/eventbus';
+import { centralEventbus } from '../../helpers/eventbus';
 import { List } from 'immutable';
 
 const MAX_HISTORY_SIZE = 6;
@@ -22,7 +22,7 @@ export const setSnapshotsHistory = (snapshot: Snapshot) => {
   setBee(snapshotsToken, snapshots);
 };
 
-centralEventBus.on('screenshot').subscribe(res => {
+centralEventbus.on('screenshot').subscribe(res => {
   setBee(snapshotToken, res.message);
   setSnapshotsHistory(res.message);
 });

@@ -1,6 +1,6 @@
 import React, { FC, useCallback } from 'react';
 import { CloseOutlined, MinusOutlined } from '@ant-design/icons';
-import { centralEventBus } from '../../helpers/eventbus';
+import { centralEventbus } from '../../helpers/eventbus';
 import './Header.scss';
 import { Modal } from 'antd';
 
@@ -10,12 +10,12 @@ const Header: FC = () => {
       title: '提示',
       content: '确定退出？',
       onOk() {
-        centralEventBus.emit('close');
+        centralEventbus.emit('close');
       },
     });
   }, []);
   const onMinimize = useCallback(() => {
-    centralEventBus.emit('minimize');
+    centralEventbus.emit('minimize');
   }, []);
 
   return (

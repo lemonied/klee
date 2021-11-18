@@ -22,7 +22,7 @@ import { SnapshotModal, SnapshotModalInstance } from '../snapshot-modal/Snapshot
 import './index.scss';
 import { Picker, PickerInstance, CropperData } from '../picker/Picker';
 import { List, Map, fromJS } from 'immutable';
-import { centralEventBus } from '../../helpers/eventbus';
+import { centralEventbus } from '../../helpers/eventbus';
 import { useProcessList } from './process-list';
 import { combineClassNames } from '../../helpers/utils';
 import { keyboardMap } from './keyboard';
@@ -44,7 +44,7 @@ const ProcessForm: FC<Props> = (props) => {
   const pickerRef = useRef<PickerInstance>();
 
   const onPicked = useCallback((data: CropperData) => {
-    centralEventBus.emit('select', data).subscribe((res) => {
+    centralEventbus.emit('select', data).subscribe((res) => {
       const crop = res.message;
       let target = list.setIn(
         [...listRef.current!, 'crop'],

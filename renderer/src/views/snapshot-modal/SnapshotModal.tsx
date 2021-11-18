@@ -10,7 +10,7 @@ import {
   Modal,
 } from 'antd';
 import './index.scss';
-import { centralEventBus } from '../../helpers/eventbus';
+import { centralEventbus } from '../../helpers/eventbus';
 import { Subscription } from 'rxjs';
 import { useSnapshot } from '../picker/snapshot';
 
@@ -32,8 +32,8 @@ const SnapshotModal = forwardRef<SnapshotModalInstance | undefined, Props>((prop
   useEffect(() => {
     let subscription: Subscription;
     if (visible) {
-      subscription = centralEventBus.on('screenshot').subscribe((res) => {
-        centralEventBus.emit('focus');
+      subscription = centralEventbus.on('screenshot').subscribe((res) => {
+        centralEventbus.emit('focus');
         if (typeof onChange === 'function') {
           setVisible(false);
           onChange(res.message);
@@ -51,7 +51,7 @@ const SnapshotModal = forwardRef<SnapshotModalInstance | undefined, Props>((prop
   }, [onChange, snapshot]);
 
   const minimize = useCallback(() => {
-    centralEventBus.emit('minimize');
+    centralEventbus.emit('minimize');
   }, []);
 
   useImperativeHandle(ref, () => {

@@ -2,7 +2,7 @@ import { filter, Observable, take } from 'rxjs';
 
 const globalEvents = (window as any).globalEvents;
 
-export const centralEventBus = {
+export const centralEventbus = {
   on: (channel: string) => {
     return new Observable<{ event: any; message: any; }>(subscriber => {
       const listener = (event: any, message: any) => {
@@ -18,7 +18,7 @@ export const centralEventBus = {
   },
   emit: (channel: string, data?: any) => {
     globalEvents?.send(channel, data);
-    return centralEventBus.on(`${channel}-reply`).pipe(
+    return centralEventbus.on(`${channel}-reply`).pipe(
       take(1),
       filter(res => res.message !== 'error'),
     );

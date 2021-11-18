@@ -11,7 +11,7 @@ import Cropper from 'cropperjs';
 import 'cropperjs/dist/cropper.css';
 import './index.scss';
 import { Button, Modal } from 'antd';
-import { centralEventBus } from '../../helpers/eventbus';
+import { centralEventbus } from '../../helpers/eventbus';
 import { Subscription } from 'rxjs';
 
 export interface CropperData {
@@ -91,8 +91,8 @@ const Picker = forwardRef<PickerInstance | undefined, Props>((props, ref) => {
   useEffect(() => {
     let subscription: Subscription;
     if (visible) {
-      subscription = centralEventBus.on('screenshot').subscribe((res) => {
-        centralEventBus.emit('focus');
+      subscription = centralEventbus.on('screenshot').subscribe((res) => {
+        centralEventbus.emit('focus');
       });
     }
     return () => subscription?.unsubscribe();
@@ -132,7 +132,7 @@ const Picker = forwardRef<PickerInstance | undefined, Props>((props, ref) => {
   }, [getCroppedData]);
 
   const minimize = useCallback(() => {
-    centralEventBus.emit('minimize');
+    centralEventbus.emit('minimize');
   }, []);
 
   const handleHistorySelected = useCallback((screenshot: Snapshot) => {
