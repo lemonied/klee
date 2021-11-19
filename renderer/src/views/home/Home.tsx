@@ -1,6 +1,7 @@
 import React, { FC, useCallback, useState } from 'react';
 import {
   Button,
+  Switch,
 } from 'antd';
 import { Link } from 'react-router-dom';
 import './index.scss';
@@ -31,6 +32,9 @@ const Home: FC = () => {
       setProcessState(false);
     });
   }, []);
+  const onLogSwitchChange = useCallback((checked: boolean) => {
+    centralEventbus.emit(checked ? 'log-on' : 'log-off');
+  }, []);
 
   return (
     <>
@@ -42,6 +46,10 @@ const Home: FC = () => {
         </p>
         <ProcessForm disabled={processState || loading} />
         <div className={'process-operator'}>
+          <span>
+            <Switch onChange={onLogSwitchChange} />
+            输出日志
+          </span>
           {
             processState ?
               (<Button type={'default'} loading={loading} danger onClick={cancelProcess}>停止</Button>) :

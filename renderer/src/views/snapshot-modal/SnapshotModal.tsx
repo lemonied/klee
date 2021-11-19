@@ -77,8 +77,7 @@ const SnapshotModal = forwardRef<SnapshotModalInstance | undefined, Props>((prop
       <div className={'content'}>
         <h2>你可以使用以下任意一种方式截图</h2>
         <p>1、<Button type={'link'} size={'small'} onClick={minimize}>最小化</Button>程序后，按下 <code>ctrl + alt + 0</code> 截图，注意：不要关闭该弹窗。</p>
-        <p>Some contents...</p>
-        <p>3、使用<Button type={'link'} disabled={!snapshot} onClick={handleHistory}>上一次截图</Button></p>
+        <p>2、使用<Button type={'link'} disabled={!snapshot} onClick={handleHistory}>历史记录</Button></p>
         <p>注意：必须是全屏截图</p>
       </div>
       <div className={'footer'}>

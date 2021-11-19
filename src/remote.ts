@@ -14,7 +14,7 @@ async function onScreenshot() {
   });
 }
 
-function screenshotListener() {
+function remoteListener() {
   centralEventbus.on('select').subscribe((e) => {
     const crop = e.message as CropData;
     const image = processor.getHistory(crop);
@@ -62,6 +62,12 @@ function screenshotListener() {
       e.event.reply('stop-process-reply', 'error');
     }
   });
+  centralEventbus.on('log-on').subscribe(() => {
+    processor.logAble = true;
+  });
+  centralEventbus.on('log-off').subscribe(() => {
+    processor.logAble = false;
+  });
 }
 
 function onWindowOperator(win: BrowserWindow) {
@@ -80,6 +86,7 @@ function onWindowOperator(win: BrowserWindow) {
   win.webContents.addListener('before-input-event', async (e, input) => {
     if (input.type === 'keyDown' && input.code === 'F5') {
       win.reload();
+      processor.logAble = false;
       await processor.cancelMouseListener();
     }
     if (input.type === 'keyDown' && input.code === 'F12') {
@@ -92,7 +99,7 @@ export function startChildProcess(win: BrowserWindow) {
   centralEventbus.webContents = win.webContents;
   globalShortcut.register('CommandOrControl+Alt+num0', onScreenshot);
   globalShortcut.register('CommandOrControl+Alt+0', onScreenshot);
-  screenshotListener();
+  remoteListener();
   onWindowOperator(win);
   app.on('will-quit', () => {
     globalShortcut.unregisterAll();

@@ -1,5 +1,6 @@
 import React, {
-  FC, forwardRef,
+  FC,
+  forwardRef,
   useCallback,
   useImperativeHandle,
   useMemo,
@@ -17,6 +18,7 @@ import {
 import {
   FileImageOutlined,
   DragOutlined,
+  DeleteOutlined,
 } from '@ant-design/icons';
 import { SnapshotModal, SnapshotModalInstance } from '../snapshot-modal/SnapshotModal';
 import './index.scss';
@@ -138,6 +140,10 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
       case 'texture':
         target = target.setIn([...keyPath, 'value'], 70);
         break;
+      case 'absolute':
+        target = target.setIn([...keyPath, 'value'], 90);
+        break;
+      default:
     }
     setList(target);
   }, [originList, setList]);
@@ -179,6 +185,9 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
     let target = originList;
     target = target.setIn([...keyPath, 'otherwise'], event.target.checked);
     setList(target);
+  }, [originList, setList]);
+  const handleDeleteRow = useCallback((keyPath: any[]) => {
+    setList(originList.deleteIn(keyPath));
   }, [originList, setList]);
   const getKeyOptions = useCallback((keyPath: any[]) => {
     const keyOptions = keyboardMap.map(v => ({ value: v }));
@@ -295,7 +304,7 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
                                           <div className={'condition line-space'} key={index}>
                                             <Select
                                               disabled={disabled}
-                                              defaultValue={condition.get('type')}
+                                              value={condition.get('type')}
                                               onChange={(e) => handleConditionChange([...keyPath, k, 'conditions', index], e)}
                                               style={{ minWidth: 100 }}
                                             >
@@ -305,7 +314,7 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
                                             </Select>
                                             <Select
                                               disabled={disabled}
-                                              defaultValue={condition.get('size')}
+                                              value={condition.get('size')}
                                               onChange={(e) => handleSizeJudgment([...keyPath, k, 'conditions', index], e)}
                                             >
                                               <Option value="more">大于</Option>
@@ -332,7 +341,24 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
                                                   case 'texture':
                                                     return (
                                                       <Tooltip
-                                                        title={'纹理相似度是将灰度化后的图片进行对比，一般当相似度大于70%时，则认为两张图片相似'}
+                                                        title={'纹理相似度是将灰度化后（忽略色彩）的图片进行对比，一般当相似度大于70%时，则认为两张图片相似'}
+                                                      >
+                                                        <InputNumber
+                                                          disabled={disabled}
+                                                          style={{ width: 150 }}
+                                                          min={0}
+                                                          max={100}
+                                                          step={1}
+                                                          value={condition.get('value')}
+                                                          onChange={(value) => handleConditionValueChange([...keyPath, k, 'conditions', index], value)}
+                                                          addonAfter={'%'}
+                                                        />
+                                                      </Tooltip>
+                                                    );
+                                                  case 'absolute':
+                                                    return (
+                                                      <Tooltip
+                                                        title={'完全相似度是将图片的颜色通道进行完全对比'}
                                                       >
                                                         <InputNumber
                                                           disabled={disabled}
@@ -385,6 +411,16 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
                                 );
                             }
                           })()
+                        }
+                        {
+                          disabled ?
+                            null :
+                            (
+                              <DeleteOutlined
+                                className={'delete-row'}
+                                onClick={() => handleDeleteRow([...keyPath, k])}
+                              />
+                            )
                         }
                       </div>
                       {

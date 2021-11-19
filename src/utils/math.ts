@@ -109,5 +109,12 @@ function standard(a: number[], b: number[]) {
 
 // 计算两组数据的相似度
 export function textureCompare(grayscale: number[], newGrayscale: number[]): number {
-  return standard(grayscale, newGrayscale);
+  return 100 - Math.min(standard(grayscale, newGrayscale), 100);
+}
+
+export function absoluteCompare(rgb: RGB[], newRGB: RGB[]): number {
+  const r = standard(rgb.map(v => v.r), newRGB.map(v => v.r));
+  const g = standard(rgb.map(v => v.g), newRGB.map(v => v.g));
+  const b = standard(rgb.map(v => v.b), newRGB.map(v => v.b));
+  return 100 - Math.min(Math.max(r, g, b), 100);
 }

@@ -1,3 +1,5 @@
+@import "src/common/styles/variable";
+
 .process-form{
   .form-level{
     padding: 20px 10px;
@@ -27,6 +29,14 @@
   .conditional-text{
     color: #006d75;
     font-size: 16px;
+  }
+  .delete-row{
+    color: $color-danger;
+    font-size: 16px;
+    &:hover{
+      cursor: pointer;
+      opacity: .7;
+    }
   }
   .link{
     &:hover{

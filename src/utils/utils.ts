@@ -40,9 +40,3 @@ export function setIn(target: any, keyPath: Array<string | number>, value: any) 
     }
   }
 }
-
-export function log(...args: any[]) {
-  if (process.env.NODE_ENV === 'development') {
-    console.log(...args);
-  }
-}

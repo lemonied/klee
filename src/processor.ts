@@ -1,5 +1,5 @@
 import { SnapshotItem, ProcessItem, SharedWorkerData, CropData } from './models';
-import { nextTick, randomStr, setIn, sleep, log } from './utils/utils';
+import { nextTick, randomStr, setIn, sleep } from './utils/utils';
 import { centralEventbus } from './utils/eventbus';
 import { jimpScreenShot } from './picture';
 import ioHook from 'iohook';
@@ -20,6 +20,7 @@ class Processor {
     workerDelay: 800,
   };
   worker?: Worker;
+  logAble = false;
   constructor() {
     ioHook.on('mousedown', (e) => {
       // 侧键2 -> 5, 侧键1 -> 4, 左键 -> 1, 右键 -> 2
@@ -38,6 +39,11 @@ class Processor {
       }
     });
   }
+  log(data: any) {
+    if (this.logAble) {
+      centralEventbus.emit('log', data);
+    }
+  }
   getHistory(crop: CropData) {
     if (crop.id) {
       return this.SNAPSHOT_HISTORY.find(v => v.id === crop.id) || null;
@@ -52,7 +58,8 @@ class Processor {
     centralEventbus.emit('history', this.SNAPSHOT_HISTORY.map((item) => {
       return {
         id: item.id,
-        base64: item.buffer.toString('base64'),
+        timestamp: item.timestamp,
+        base64: item.dataURL,
       };
     }));
   };
@@ -161,13 +168,17 @@ class Processor {
         }
         if (v.type === 'general' && v.key) {
           await sleep(v.keydown, c => cancel = c);
-          robot.keyToggle(v.key, 'down');
-          try {
-            await sleep(v.keyup, c => cancel = c);
-            robot.keyToggle(v.key, 'up');
-          } catch (e) {
-            robot.keyToggle(v.key, 'up');
-            throw e;
+          if (v.keyup > 0) {
+            robot.keyToggle(v.key, 'down');
+            try {
+              await sleep(v.keyup, c => cancel = c);
+              robot.keyToggle(v.key, 'up');
+            } catch (e) {
+              robot.keyToggle(v.key, 'up');
+              throw e;
+            }
+          } else {
+            robot.keyTap(v.key);
           }
         } else if (v.type === 'picker') {
           if (v.passed) {
@@ -183,13 +194,13 @@ class Processor {
     const timeout = () => {
       loop(this.PROCESS_LIST).then(timeout).catch(error => {
         // stop
-        log(error);
+        this.log(error);
         cancel = null;
         stop = null;
       });
     };
     timeout();
-    log('start process');
+    this.log('start process');
     return () => {
       stop = true;
       typeof cancel === 'function' && cancel();
@@ -203,11 +214,11 @@ class Processor {
       this.worker?.postMessage(shot.bitmap);
       await sleep(this.config.workerDelay, c => cancel = c);
     };
-    log('worker start');
+    this.log('worker start');
     const timeout = () => {
       workerLoop().then(timeout).catch(() => {
         cancel = null;
-        log('worker stop');
+        this.log('worker stop');
       });
     };
     if (this.sharedWorkerData.length) {
@@ -224,7 +235,8 @@ class Processor {
        workerData: this.sharedWorkerData,
      });
      this.worker.on('message', (e) => {
-       setIn(this.PROCESS_LIST, e.keyPath, e.result);
+       setIn(this.PROCESS_LIST, [...e.keyPath, 'passed'], e.result);
+       this.log(e);
      });
    }
   }
