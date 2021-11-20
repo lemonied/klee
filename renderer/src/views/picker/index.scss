@@ -6,7 +6,7 @@
   bottom: 0;
   display: flex;
   flex-direction: column;
-  z-index: 1;
+  z-index: 10;
   .picker-content{
     flex: 1;
     overflow: hidden;
@@ -15,6 +15,7 @@
     display: flex;
     padding: 10px;
     align-items: center;
+    background: #fff;
     .middle{
       flex: 1;
       padding: 0 20px;

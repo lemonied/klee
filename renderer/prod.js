@@ -3,7 +3,7 @@ const child_progress = require('child_process');
 // production
 Object.assign(process.env, {
   'EXTEND_ESLINT': true,
-  'PUBLIC_URL': '/',
+  'PUBLIC_URL': './',
   'GENERATE_SOURCEMAP': false,
   'BUILD_PATH': '../dist/view',
 });

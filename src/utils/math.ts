@@ -1,5 +1,4 @@
-import { Bitmap } from '@jimp/core';
-import { CropData, HSV, RGB } from '../models';
+import { CropData, HSV, RGB, Bitmap } from '../models';
 
 export function average(list: number[]) {
   return list.reduce((p, c) => p + c, 0) / list.length;
@@ -10,9 +9,9 @@ export function average(list: number[]) {
  */
 export function getRGB(bitmap: Bitmap, x: number, y: number): RGB {
   const base = x * 4 + y * bitmap.width * 4;
-  const r = bitmap.data[base]; // red
-  const g = bitmap.data[base + 1]; // green
-  const b = bitmap.data[base + 2]; // blue
+  const r = bitmap.image[base]; // red
+  const g = bitmap.image[base + 1]; // green
+  const b = bitmap.image[base + 2]; // blue
   return { r, g, b };
 }
 
@@ -40,6 +39,9 @@ export function rgb2hsv(rgb: RGB[]): HSV[] {
     }
     if (h < 0) {
       h = h + 360;
+    }
+    if (isNaN(h)) {
+      h = 0;
     }
     return { h, s, v };
   });
@@ -88,21 +90,25 @@ export function cutPicture(crop: CropData, bitmap: Bitmap): RGB[] {
   return rgb;
 }
 
-// 计算两组数据差值的标准差
-function standard(a: number[], b: number[]) {
+function diffAverage(a: number[], b: number[]): [number, number[]] {
   const length = Math.min(a.length, b.length);
   const difference = [];
   for (let i = 0; i < length; i++) {
     difference.push(b[i] - a[i]);
   }
-  const aver = average(difference);
+  return [average(difference), difference];
+}
+
+// 计算两组数据差值的标准差
+function standard(a: number[], b: number[]) {
+  const [aver, difference] = diffAverage(a, b);
   if (aver === 0) {
     return 0;
   }
   return Math.pow(
     difference.reduce((previous, current) => {
       return previous + Math.pow(current - aver, 2);
-    }, 0) / length,
+    }, 0) / difference.length,
     0.5,
   );
 }
@@ -112,9 +118,10 @@ export function textureCompare(grayscale: number[], newGrayscale: number[]): num
   return 100 - Math.min(standard(grayscale, newGrayscale), 100);
 }
 
-export function absoluteCompare(rgb: RGB[], newRGB: RGB[]): number {
-  const r = standard(rgb.map(v => v.r), newRGB.map(v => v.r));
-  const g = standard(rgb.map(v => v.g), newRGB.map(v => v.g));
-  const b = standard(rgb.map(v => v.b), newRGB.map(v => v.b));
-  return 100 - Math.min(Math.max(r, g, b), 100);
+export function absoluteCompare(hsv: HSV[], newHSV: HSV[]): number {
+  const [h] = diffAverage(hsv.map(v => v.h), newHSV.map(v => v.h));
+  const [s] = diffAverage(hsv.map(v => v.s * 100), newHSV.map(v => v.s * 100));
+  const [v] = diffAverage(hsv.map(v => v.v * 100), newHSV.map(v => v.v * 100));
+  const diff = (Math.abs(h) + Math.abs(s) + Math.abs(v)) / (360 + 100 + 100) * 2;
+  return (1 - Math.min(diff, 1)) * 100;
 }

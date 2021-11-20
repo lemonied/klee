@@ -1,5 +1,9 @@
-import * as Buffer from 'buffer';
-import Jimp from 'jimp';
+
+export interface Bitmap {
+  width: number;
+  height: number;
+  image: Buffer;
+}
 
 export interface RGB {
   r: number;
@@ -18,7 +22,7 @@ export interface SnapshotItem {
   timestamp: number;
   buffer: Buffer,
   dataURL: string;
-  jimp: Jimp;
+  bitmap: Bitmap;
 }
 
 export interface CropData {
@@ -62,7 +66,7 @@ export interface ProcessTypeTimeout {
 export type ProcessItem = ProcessTypePicker | ProcessTypeGeneral | ProcessTypeTimeout;
 
 export interface SharedWorkerData {
-  keyPath: number[];
+  keyPath: Array<number | string>;
   crop: CropData;
   conditions: PickerCondition[];
 }

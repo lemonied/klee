@@ -30,6 +30,7 @@ import { combineClassNames } from '../../helpers/utils';
 import { keyboardMap } from './keyboard';
 import { ReactSortable } from 'react-sortablejs';
 import { randomStr } from '../../helpers/utils';
+import { CheckboxChangeEvent } from 'antd/es/checkbox';
 
 const { Option } = Select;
 
@@ -102,6 +103,7 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
     const row = {
       id: typeof index === 'number' ? randomStr(index, 6) : index,
       type,
+      available: true,
     };
     if (type === 'general') {
       Object.assign(row, {
@@ -141,7 +143,7 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
         target = target.setIn([...keyPath, 'value'], 70);
         break;
       case 'absolute':
-        target = target.setIn([...keyPath, 'value'], 90);
+        target = target.setIn([...keyPath, 'value'], 96);
         break;
       default:
     }
@@ -181,9 +183,14 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
     setList(target);
   }, [originList, setList]);
   // if else
-  const handleElseChange = useCallback((keyPath: any[], event: any) => {
+  const handleElseChange = useCallback((keyPath: any[], event: CheckboxChangeEvent) => {
     let target = originList;
     target = target.setIn([...keyPath, 'otherwise'], event.target.checked);
+    setList(target);
+  }, [originList, setList]);
+  const handleAvailableChange = useCallback((keyPath: any[], event: CheckboxChangeEvent) => {
+    let target = originList;
+    target = target.setIn([...keyPath, 'available'], event.target.checked);
     setList(target);
   }, [originList, setList]);
   const handleDeleteRow = useCallback((keyPath: any[]) => {
@@ -229,6 +236,7 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
               animation={200}
               tag={'div'}
               handle={`.sortable-handle-${level}`}
+              className={'form-row-wrapper'}
             >
               {
                 list.map((v, k) => {
@@ -239,7 +247,7 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
                         <Select
                           defaultValue={v.get('type')}
                           onChange={(e) => handleTypeChange(k, e)}
-                          disabled={disabled}
+                          disabled={disabled || !v.get('available')}
                         >
                           <Option value="general">按键</Option>
                           <Option value="picker">取色</Option>
@@ -252,7 +260,7 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
                                 return (
                                   <div className={'flex-align-center line-space'}>
                                     <AutoComplete
-                                      disabled={disabled}
+                                      disabled={disabled || !v.get('available')}
                                       placeholder={'输入按键'}
                                       value={v.get('key')}
                                       onChange={(e) => handleKeyChange([...keyPath, k], e)}
@@ -261,7 +269,7 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
                                     />
                                     <Tooltip title={`按下延迟，${v.get('keydown')}毫秒后按下${v.get('key')}`}>
                                       <InputNumber
-                                        disabled={disabled}
+                                        disabled={disabled || !v.get('available')}
                                         min={0}
                                         step={1}
                                         value={v.get('keydown')}
@@ -272,7 +280,7 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
                                     </Tooltip>
                                     <Tooltip title={`抬起延迟，${v.get('keyup')}毫秒后抬起${v.get('key')}`}>
                                       <InputNumber
-                                        disabled={disabled}
+                                        disabled={disabled || !v.get('available')}
                                         min={0}
                                         step={1}
                                         value={v.get('keyup')}
@@ -287,15 +295,24 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
                                 return (
                                   <div className={'flex-align-center line-space'}>
                                     <span className={'conditional-text'}>if</span>
-                                    <div onClick={() => !disabled && handleShowModal(k)} className={combineClassNames('snapshot link', disabled ? 'disabled' : null)}>
+                                    <div
+                                      onClick={() => !disabled && v.get('available') && handleShowModal(k)}
+                                      className={combineClassNames('snapshot link', disabled || !v.get('available') ? 'disabled' : null)}
+                                    >
                                       {
                                         v.get('crop') ?
-                                          <img src={v.getIn(['crop', 'base64'])} alt="snapshot"/> :
-                                          <Avatar
-                                            size={'large'}
-                                            shape={'square'}
-                                            icon={<FileImageOutlined />}
-                                          />
+                                          (
+                                            <Tooltip title={`明亮度：${v.getIn(['crop', 'lightness'])}`}>
+                                              <img src={v.getIn(['crop', 'base64'])} alt="snapshot"/>
+                                            </Tooltip>
+                                          ) :
+                                          (
+                                            <Avatar
+                                              size={'large'}
+                                              shape={'square'}
+                                              icon={<FileImageOutlined />}
+                                            />
+                                          )
                                       }
                                     </div>
                                     <div className={'flex-align-center line-space'}>
@@ -303,7 +320,7 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
                                         v.get('conditions')?.map((condition: any, index: number) => (
                                           <div className={'condition line-space'} key={index}>
                                             <Select
-                                              disabled={disabled}
+                                              disabled={disabled || !v.get('available')}
                                               value={condition.get('type')}
                                               onChange={(e) => handleConditionChange([...keyPath, k, 'conditions', index], e)}
                                               style={{ minWidth: 100 }}
@@ -313,7 +330,7 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
                                               <Option value="absolute">完全相似度</Option>
                                             </Select>
                                             <Select
-                                              disabled={disabled}
+                                              disabled={disabled || !v.get('available')}
                                               value={condition.get('size')}
                                               onChange={(e) => handleSizeJudgment([...keyPath, k, 'conditions', index], e)}
                                             >
@@ -329,7 +346,7 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
                                                         title={'明亮度是指该裁剪区域的平均亮度，取值范围 0 ~ 1。'}
                                                       >
                                                         <InputNumber
-                                                          disabled={disabled}
+                                                          disabled={disabled || !v.get('available')}
                                                           min={0}
                                                           max={1}
                                                           step={0.0001}
@@ -344,7 +361,7 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
                                                         title={'纹理相似度是将灰度化后（忽略色彩）的图片进行对比，一般当相似度大于70%时，则认为两张图片相似'}
                                                       >
                                                         <InputNumber
-                                                          disabled={disabled}
+                                                          disabled={disabled || !v.get('available')}
                                                           style={{ width: 150 }}
                                                           min={0}
                                                           max={100}
@@ -361,7 +378,7 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
                                                         title={'完全相似度是将图片的颜色通道进行完全对比'}
                                                       >
                                                         <InputNumber
-                                                          disabled={disabled}
+                                                          disabled={disabled || !v.get('available')}
                                                           style={{ width: 150 }}
                                                           min={0}
                                                           max={100}
@@ -386,7 +403,7 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
                                             title={'勾选后，当前层级的下一个流程将执行else逻辑'}
                                           >
                                             <Checkbox
-                                              disabled={disabled}
+                                              disabled={disabled || !v.get('available')}
                                               checked={v.get('otherwise')}
                                               onChange={value => handleElseChange([...keyPath, k], value)}
                                             >
@@ -401,7 +418,7 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
                               default:
                                 return (
                                   <InputNumber
-                                    disabled={disabled}
+                                    disabled={disabled || !v.get('available')}
                                     min={50}
                                     step={1}
                                     addonAfter={'毫秒'}
@@ -412,6 +429,19 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
                             }
                           })()
                         }
+                        <Tooltip
+                          title={'启用该流程'}
+                        >
+                          <div style={{ paddingTop: 4 }}>
+                            <Checkbox
+                              disabled={disabled}
+                              checked={v.get('available')}
+                              onChange={value => handleAvailableChange([...keyPath, k], value)}
+                            >
+                              <span>启用</span>
+                            </Checkbox>
+                          </div>
+                        </Tooltip>
                         {
                           disabled ?
                             null :

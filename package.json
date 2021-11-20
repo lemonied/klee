@@ -1,16 +1,18 @@
 {
-  "name": "color-picker",
+  "name": "klee",
   "version": "1.0.0",
   "description": "",
   "main": "dist/main/main.js",
   "scripts": {
     "compile": "tsc",
     "start": "npm run compile && node open.js",
-    "rebuild": "npm rebuild iohook --runtime=electron && electron-rebuild"
+    "rebuild": "npm rebuild iohook --runtime=electron && electron-rebuild",
+    "package.exe": "npm run compile && node package.js --win32"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@types/pngjs": "^6.0.1",
     "electron": "11.5.0",
     "electron-packager": "^15.4.0",
     "electron-rebuild": "^3.2.4",
@@ -18,7 +20,7 @@
   },
   "dependencies": {
     "iohook": "^0.9.3",
-    "jimp": "^0.16.1",
+    "pngjs": "^6.0.0",
     "robotjs": "^0.6.0",
     "rxjs": "^7.4.0"
   },

@@ -8,7 +8,7 @@ export const useProcessList = () => {
 };
 
 export const filterProcess = (processList: any[]): any[] => {
-  return processList.map((v: any) => {
+  return processList.filter(v => v.available).map(v => {
     const crop = v.crop;
     return {
       type: v.type,

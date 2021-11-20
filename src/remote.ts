@@ -1,5 +1,5 @@
 import { processor } from './processor';
-import { globalShortcut, app, BrowserWindow } from 'electron';
+import { globalShortcut, app, BrowserWindow, shell } from 'electron';
 import { centralEventbus } from './utils/eventbus';
 import { tap } from 'rxjs';
 import { CropData } from './models';
@@ -20,7 +20,7 @@ function remoteListener() {
     const image = processor.getHistory(crop);
     if (image) {
       try {
-        const rgb = cutPicture(crop, image.jimp.bitmap);
+        const rgb = cutPicture(crop, image.bitmap);
         const hsv = rgb2hsv(rgb);
         const grayScale = grayscale(rgb)
         const imageData = {
@@ -68,6 +68,18 @@ function remoteListener() {
   centralEventbus.on('log-off').subscribe(() => {
     processor.logAble = false;
   });
+  centralEventbus.on('trigger-type').subscribe((e) => {
+    processor.config.type = e.message;
+  });
+  centralEventbus.on('trigger-button').subscribe((e) => {
+    processor.config.button = Number(e.message);
+  });
+  centralEventbus.on('snapshot-timeout').subscribe((e) => {
+    processor.config.workerDelay = e.message;
+  });
+  centralEventbus.on('listener-config').subscribe((e) => {
+    Object.assign(processor.config, e.message);
+  });
 }
 
 function onWindowOperator(win: BrowserWindow) {
@@ -101,6 +113,10 @@ export function startChildProcess(win: BrowserWindow) {
   globalShortcut.register('CommandOrControl+Alt+0', onScreenshot);
   remoteListener();
   onWindowOperator(win);
+  win.webContents.on('new-window', async (event, url) => {
+    event.preventDefault();
+    await shell.openExternal(url);
+  });
   app.on('will-quit', () => {
     globalShortcut.unregisterAll();
   });

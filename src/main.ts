@@ -25,7 +25,7 @@ async function createWindow() {
     } catch (e) { console.error(e); }
   } else {
     try {
-      await win.loadURL(`file:///${path.join(__dirname, '../dist/view/index.html')}`);
+      await win.loadURL(`file:///${path.join(__dirname, '../view/index.html')}`);
     } catch (e) { console.error(e); }
   }
   return win;

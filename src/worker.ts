@@ -2,9 +2,8 @@ import {
   workerData,
   parentPort,
 } from 'worker_threads';
-import { absoluteCompare, cutPicture, grayscale, lightness, textureCompare } from './utils/math';
-import { SharedWorkerData } from './models';
-import { Bitmap } from '@jimp/core';
+import { absoluteCompare, cutPicture, grayscale, lightness, rgb2hsv, textureCompare } from './utils/math';
+import { Bitmap, SharedWorkerData } from './models';
 
 const shared = workerData as SharedWorkerData[];
 
@@ -27,7 +26,8 @@ const onMessage = (bitmap: Bitmap) => {
           light > condition.value :
           light < condition.value;
       } else if (condition.type === 'absolute') {
-        const absolute = value = absoluteCompare(v.crop.rgb!, currentRGB);
+        const hsv = rgb2hsv(currentRGB);
+        const absolute = value = absoluteCompare(v.crop.hsv!, hsv);
         passed = condition.size === 'more' ?
           absolute > condition.value :
           absolute < condition.value;

@@ -1,7 +1,7 @@
 import { SnapshotItem, ProcessItem, SharedWorkerData, CropData } from './models';
 import { nextTick, randomStr, setIn, sleep } from './utils/utils';
 import { centralEventbus } from './utils/eventbus';
-import { jimpScreenShot } from './picture';
+import { getBuffer, screenshot } from './picture';
 import ioHook from 'iohook';
 import robot from 'robotjs';
 import { Worker } from 'worker_threads';
@@ -17,7 +17,7 @@ class Processor {
   config = {
     type: 'press',
     button: 5,
-    workerDelay: 800,
+    workerDelay: 500,
   };
   worker?: Worker;
   logAble = false;
@@ -75,12 +75,12 @@ class Processor {
   }
 
   async screenshot() {
-    const jimp = jimpScreenShot();
-    const buffer = await jimp.getBufferAsync('image/png');
+    const bitmap = screenshot();
+    const buffer = getBuffer(bitmap);
     const ret = {
       id: randomStr(),
       timestamp: Date.now(),
-      jimp,
+      bitmap,
       buffer,
       dataURL: `data:image/png;base64,${buffer.toString('base64')}`,
     };
@@ -90,7 +90,7 @@ class Processor {
   // 保存流程后格式化流程
   formatProcessList() {
     this.sharedWorkerData = [];
-    const loop = (list: ProcessItem[], keyPath: number[] = []) => {
+    const loop = (list: ProcessItem[], keyPath: Array<number | string> = []) => {
       for (let i = 0; i < list.length; i++) {
         const v = list[i];
         if (v.type === 'picker') {
@@ -101,7 +101,7 @@ class Processor {
               conditions: v.conditions,
             });
           }
-          loop(v.children, [...keyPath, i]);
+          loop(v.children, [...keyPath, i, 'children']);
         }
       }
     };
@@ -111,7 +111,6 @@ class Processor {
   // 开始鼠标监听
   startMouseListener() {
     this.setWorkerProcess();
-    this.config.button = 5;
     ioHook.start();
   }
   // 退出鼠标监听
@@ -158,13 +157,16 @@ class Processor {
         const v = list[i];
         const last = list[i - 1];
         if (
-          last?.type === 'picker' && last.otherwise &&
-          (last.skip || last.passed)
+          last?.type === 'picker' && last.otherwise
         ) {
-          if (v.type === 'picker' && v.otherwise) {
-            v.skip = true;
+          if (last.skip || last.passed) {
+            if (v.type === 'picker' && v.otherwise) {
+              v.skip = true;
+            }
+            continue;
+          } else if (v.type === 'picker' && v.otherwise) {
+            v.skip = false;
           }
-          continue;
         }
         if (v.type === 'general' && v.key) {
           await sleep(v.keydown, c => cancel = c);
@@ -182,7 +184,6 @@ class Processor {
           }
         } else if (v.type === 'picker') {
           if (v.passed) {
-            v.skip = false;
             await loop(v.children);
           }
         } else if (v.type === 'timeout') {
@@ -210,8 +211,8 @@ class Processor {
   startWorkerProcess() {
     let cancel: (() => void) | null = null;
     const workerLoop = async () => {
-      const shot = jimpScreenShot();
-      this.worker?.postMessage(shot.bitmap);
+      const shot = screenshot();
+      this.worker?.postMessage(shot);
       await sleep(this.config.workerDelay, c => cancel = c);
     };
     this.log('worker start');

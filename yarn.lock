@@ -424,6 +424,13 @@
   resolved "https://registry.npmmirror.com/@types/node/download/@types/node-12.20.37.tgz?cache=0&sync_timestamp=1636407250305&other_urls=https%3A%2F%2Fregistry.npmmirror.com%2F%40types%2Fnode%2Fdownload%2F%40types%2Fnode-12.20.37.tgz#abb38afa9d6e8a2f627a8cb52290b3c80fbe61ed"
   integrity sha512-i1KGxqcvJaLQali+WuypQnXwcplhtNtjs66eNsZpp2P2FL/trJJxx/VWsM0YCL2iMoIJrbXje48lvIQAQ4p2ZA==
 
+"@types/pngjs@^6.0.1":
+  version "6.0.1"
+  resolved "https://registry.npmmirror.com/@types/pngjs/download/@types/pngjs-6.0.1.tgz#c711ec3fbbf077fed274ecccaf85dd4673130072"
+  integrity sha1-xxHsP7vwd/7SdOzMr4XdRnMTAHI=
+  dependencies:
+    "@types/node" "*"
+
 "@types/responselike@*", "@types/responselike@^1.0.0":
   version "1.0.0"
   resolved "https://registry.nlark.com/@types/responselike/download/@types/responselike-1.0.0.tgz?cache=0&sync_timestamp=1629709126122&other_urls=https%3A%2F%2Fregistry.nlark.com%2F%40types%2Fresponselike%2Fdownload%2F%40types%2Fresponselike-1.0.0.tgz#251f4fe7d154d2bad125abe1b429b23afd262e29"
@@ -2502,6 +2509,11 @@ pngjs@^3.0.0, pngjs@^3.3.3:
   version "3.4.0"
   resolved "https://registry.npm.taobao.org/pngjs/download/pngjs-3.4.0.tgz?cache=0&sync_timestamp=1603551107900&other_urls=https%3A%2F%2Fregistry.npm.taobao.org%2Fpngjs%2Fdownload%2Fpngjs-3.4.0.tgz#99ca7d725965fb655814eaf65f38f12bbdbf555f"
   integrity sha1-mcp9clll+2VYFOr2XzjxK72/VV8=
+
+pngjs@^6.0.0:
+  version "6.0.0"
+  resolved "https://registry.npm.taobao.org/pngjs/download/pngjs-6.0.0.tgz?cache=0&sync_timestamp=1603551107900&other_urls=https%3A%2F%2Fregistry.npm.taobao.org%2Fpngjs%2Fdownload%2Fpngjs-6.0.0.tgz#ca9e5d2aa48db0228a52c419c3308e87720da821"
+  integrity sha1-yp5dKqSNsCKKUsQZwzCOh3INqCE=
 
 prebuild-install@^5.3.3:
   version "5.3.6"
