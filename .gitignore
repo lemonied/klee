@@ -11,7 +11,7 @@ node_modules
 
 # production
 /dist
-/Hi-win32-x64
+/Windy-win32-x64
 
 # misc
 .DS_Store
