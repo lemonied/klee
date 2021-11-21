@@ -1,11 +1,9 @@
 const packager = require('electron-packager');
 const { resolve } = require('path');
 
-const platform = (process.argv.find(v => v.indexOf('--') === 0) || '').replace(/^--/, '');
-
 (async () => {
   const appPaths = await packager({
-    platform,
+    platform: 'win32',
     overwrite: true,
     icon: resolve(__dirname, './renderer/public/favicon.ico'),
     ignore: path => {
