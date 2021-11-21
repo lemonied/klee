@@ -25,7 +25,6 @@ import './index.scss';
 import { Picker, PickerInstance, CropperData } from '../picker/Picker';
 import { List, Map, fromJS } from 'immutable';
 import { centralEventbus } from '../../helpers/eventbus';
-import { useProcessList } from './process-list';
 import { combineClassNames } from '../../helpers/utils';
 import { keyboardMap } from './keyboard';
 import { ReactSortable } from 'react-sortablejs';
@@ -36,11 +35,12 @@ const { Option } = Select;
 
 interface Props {
   disabled?: boolean;
+  list: List<any>;
+  setList: (value: List<any>) => void;
 }
 const ProcessForm: FC<Props> = (props) => {
 
-  const { disabled } = props;
-  const [list, setList] = useProcessList();
+  const { disabled, list, setList } = props;
   const listRef = useRef<any[]>();
 
   const modalRef = useRef<SnapshotModalInstance>();
@@ -73,6 +73,8 @@ const ProcessForm: FC<Props> = (props) => {
           list={list}
           onShowModal={showModal}
           disabled={disabled}
+          originList={list}
+          setList={setList}
         />
       </div>
       <SnapshotModal ref={modalRef} onChange={pickerRef.current?.show} />
@@ -86,14 +88,15 @@ interface FormRowInstance {
 }
 interface FormRowProps {
   list: List<any>;
+  originList: List<any>;
+  setList: (value: List<any>) => void;
   keyPath?: any[];
   onShowModal?(keyPath: any[]): void;
   disabled?: boolean;
   level?: number;
 }
 const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
-  const { keyPath = [], list, onShowModal, disabled, level = 1 } = props;
-  const [originList, setList] = useProcessList();
+  const { keyPath = [], list, onShowModal, disabled, level = 1, originList, setList } = props;
   const handleShowModal = useCallback((key: number) => {
     if (typeof onShowModal === 'function') {
       onShowModal([...keyPath, key]);
@@ -461,6 +464,8 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
                             disabled={disabled}
                             onShowModal={onShowModal}
                             keyPath={[...keyPath, k, 'children']}
+                            originList={originList}
+                            setList={setList}
                           />
                         )
                       }

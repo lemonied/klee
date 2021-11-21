@@ -4,20 +4,31 @@ import {
   Switch,
   Radio,
   RadioChangeEvent,
-  Select, InputNumber, Tooltip,
+  Select,
+  InputNumber,
+  Tooltip,
+  Tabs,
 } from 'antd';
 import { Link } from 'react-router-dom';
 import './index.scss';
 import { ProcessForm } from '../process-form/ProcessForm';
-import { useProcessList, filterProcess } from '../process-form/process-list';
+import {
+  useProcessList,
+  filterProcess,
+  useSecondaryProcessList,
+} from '../process-form/process-list';
 import { centralEventbus } from '../../helpers/eventbus';
 import { finalize } from 'rxjs';
 import { downloadJson } from '../../helpers/utils';
 import { fromJS } from 'immutable';
 import { useBaseConfig } from './base-config';
-import { useProcessLoading, useProcessState } from './process-state';
+import {
+  useProcessLoading,
+  useProcessState,
+} from './process-state';
 
 const { Option } = Select;
+const { TabPane } = Tabs;
 
 const Home: FC = () => {
 
@@ -28,17 +39,26 @@ const Home: FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const filename = useRef('config.json');
 
+  const [list, setList] = useProcessList();
+  const [secondaryList, setSecondaryList] = useSecondaryProcessList();
+
   const [config, setConfig] = useBaseConfig();
 
   const startProcess = useCallback(() => {
     setLoading(true);
     centralEventbus.emit('listener-config', config);
-    centralEventbus.emit('start-process', filterProcess(process.toJS())).pipe(
+    centralEventbus.emit(
+      'start-process',
+      {
+        mainProcess: filterProcess(process.toJS()),
+        secondaryProcess: filterProcess(secondaryList.toJS()),
+      },
+    ).pipe(
       finalize(() => setLoading(false)),
     ).subscribe(() => {
       setProcessState(true);
     });
-  }, [config, process, setLoading, setProcessState]);
+  }, [config, process, secondaryList, setLoading, setProcessState]);
   const cancelProcess = useCallback(() => {
     setLoading(true);
     centralEventbus.emit('stop-process').pipe(
@@ -66,9 +86,10 @@ const Home: FC = () => {
   const download = useCallback(() => {
     downloadJson({
       data: process,
+      secondaryData: secondaryList,
       config,
     },filename.current);
-  }, [config, process]);
+  }, [config, process, secondaryList]);
   const handleFileChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target?.files && e.target?.files[0];
     if (file) {
@@ -77,6 +98,7 @@ const Home: FC = () => {
       reader.onload = function() {
         const json = JSON.parse((this.result as any));
         json.data && setProcess(fromJS(json.data) as any);
+        json.secondaryData && setSecondaryList(fromJS(json.secondaryData) as any);
         json.config && setConfig(json.config);
         setReading(false);
         filename.current = file.name;
@@ -86,7 +108,7 @@ const Home: FC = () => {
       };
       reader.readAsText(file);
     }
-  }, [setConfig, setProcess]);
+  }, [setConfig, setProcess, setSecondaryList]);
   const formDisabled = useMemo(() => {
     return processState || loading;
   }, [loading, processState]);
@@ -100,7 +122,22 @@ const Home: FC = () => {
             <input style={{ display: 'none' }} ref={fileInputRef} type="file" accept={'application/json'} onChange={handleFileChange} />
         }
         <div className={'home-content'}>
-          <ProcessForm disabled={formDisabled} />
+          <Tabs type="card">
+            <TabPane tab="主线程" key="1">
+              <ProcessForm
+                disabled={formDisabled}
+                list={list}
+                setList={setList}
+              />
+            </TabPane>
+            <TabPane tab="副线程" key="2">
+              <ProcessForm
+                disabled={formDisabled}
+                list={secondaryList}
+                setList={setSecondaryList}
+              />
+            </TabPane>
+          </Tabs>
           <div style={{ textAlign: 'center', paddingBottom: 10 }}>
             <Button type={'link'}>
               <Link to={'/about'}>关于作者</Link>

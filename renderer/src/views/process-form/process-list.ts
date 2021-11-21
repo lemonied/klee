@@ -7,6 +7,12 @@ export const useProcessList = () => {
   return useBee(processListToken);
 };
 
+const secondaryProcessListToken = injectStore('secondaryProcessList', List<any>([]));
+
+export const useSecondaryProcessList = () => {
+  return useBee(secondaryProcessListToken);
+};
+
 export const filterProcess = (processList: any[]): any[] => {
   return processList.filter(v => v.available).map(v => {
     const crop = v.crop;

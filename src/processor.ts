@@ -1,5 +1,5 @@
 import { SnapshotItem, ProcessItem, SharedWorkerData, CropData } from './models';
-import { nextTick, randomStr, setIn, sleep } from './utils/utils';
+import { elseIfPassed, nextTick, randomStr, setIn, sleep, Token } from './utils/utils';
 import { centralEventbus } from './utils/eventbus';
 import { getBuffer, screenshot } from './picture';
 import ioHook from 'iohook';
@@ -8,19 +8,24 @@ import { Worker } from 'worker_threads';
 import { resolve } from 'path';
 
 class Processor {
-  MAX_HISTORY_SIZE = 6;
   SNAPSHOT_HISTORY: SnapshotItem[] = [];
   PROCESS_LIST: ProcessItem[] = [];
+  SECONDARY_LIST: ProcessItem[] = [];
   sharedWorkerData: SharedWorkerData[] = [];
-  processCancelToken: (() => void) | null = null;
-  workerCancelToken: (() => void) | null = null;
   config = {
     type: 'press',
     button: 5,
     workerDelay: 500,
   };
-  worker?: Worker;
   logAble = false;
+  private MAX_HISTORY_SIZE = 6;
+  private processCancelToken: (() => void) | null = null;
+  private workerCancelToken: (() => void) | null = null;
+  private worker?: Worker;
+  private workerStop = false;
+  private secondaryWorker?: Worker;
+  private secondaryWorkerToken?: Token<void>;
+  private DOWN_KEYS = new Set<string>();
   constructor() {
     ioHook.on('mousedown', (e) => {
       // 侧键2 -> 5, 侧键1 -> 4, 左键 -> 1, 右键 -> 2
@@ -44,6 +49,20 @@ class Processor {
       centralEventbus.emit('log', data);
     }
   }
+  keyToggle(key: string, behavior: 'down' | 'up') {
+    robot.keyToggle(key, behavior);
+    if (behavior === 'down') {
+      this.DOWN_KEYS.add(key);
+    } else {
+      this.DOWN_KEYS.delete(key);
+    }
+  }
+  clearKeys() {
+    this.DOWN_KEYS.forEach(value => {
+      robot.keyToggle(value, 'up');
+    });
+    this.DOWN_KEYS.clear();
+  }
   getHistory(crop: CropData) {
     if (crop.id) {
       return this.SNAPSHOT_HISTORY.find(v => v.id === crop.id) || null;
@@ -63,14 +82,19 @@ class Processor {
       };
     }));
   };
-  // 保存流程列表
-  setProcessList(value: any[]) {
+  // 保存主流程列表
+  setProcessList(value: ProcessItem[]) {
     this.PROCESS_LIST = value;
     this.formatProcessList();
   };
+  // 保存副流程列表
+  setSecondaryList(value: ProcessItem[]) {
+    this.SECONDARY_LIST = value;
+  }
   // 开启流程监听
-  setAndStartListen(value: any[]) {
-    this.setProcessList(value);
+  setAndStartListen(value: { mainProcess: ProcessItem[]; secondaryProcess: ProcessItem[]; }) {
+    this.setProcessList(value.mainProcess);
+    this.setSecondaryList(value.secondaryProcess);
     this.startMouseListener();
   }
 
@@ -111,12 +135,18 @@ class Processor {
   // 开始鼠标监听
   startMouseListener() {
     this.setWorkerProcess();
+    this.setSecondaryProcess();
     ioHook.start();
   }
   // 退出鼠标监听
   async cancelMouseListener() {
-    await this.worker?.terminate();
+    await Promise.all([
+      this.worker?.terminate(),
+      this.secondaryWorker?.terminate(),
+    ]);
     this.worker = undefined;
+    this.secondaryWorker = undefined;
+    this.secondaryWorkerToken = undefined;
     this.cancelProcess();
     ioHook.stop();
   }
@@ -137,6 +167,7 @@ class Processor {
       this.workerCancelToken();
       this.workerCancelToken = null;
     }
+    this.clearKeys();
   }
   // 开启/关闭流程循环
   toggleProgress() {
@@ -147,7 +178,7 @@ class Processor {
     }
   }
 
-  // 一般流程循环
+  // 开始流程循环
   startProgress() {
     let stop: boolean | null = false;
     let cancel: (() => void) | null = null;
@@ -156,29 +187,15 @@ class Processor {
       for (let i = 0; i < list.length; i++) {
         const v = list[i];
         const last = list[i - 1];
-        if (
-          last?.type === 'picker' && last.otherwise
-        ) {
-          if (last.skip || last.passed) {
-            if (v.type === 'picker' && v.otherwise) {
-              v.skip = true;
-            }
-            continue;
-          } else if (v.type === 'picker' && v.otherwise) {
-            v.skip = false;
-          }
+        if (!elseIfPassed(v, last)) {
+          continue;
         }
         if (v.type === 'general' && v.key) {
           await sleep(v.keydown, c => cancel = c);
           if (v.keyup > 0) {
-            robot.keyToggle(v.key, 'down');
-            try {
-              await sleep(v.keyup, c => cancel = c);
-              robot.keyToggle(v.key, 'up');
-            } catch (e) {
-              robot.keyToggle(v.key, 'up');
-              throw e;
-            }
+            this.keyToggle(v.key, 'down');
+            await sleep(v.keyup, c => cancel = c);
+            this.keyToggle(v.key, 'up');
           } else {
             robot.keyTap(v.key);
           }
@@ -200,8 +217,10 @@ class Processor {
         stop = null;
       });
     };
-    timeout();
-    this.log('start process');
+    if (this.PROCESS_LIST.length) {
+      timeout();
+      this.log('start process');
+    }
     return () => {
       stop = true;
       typeof cancel === 'function' && cancel();
@@ -211,21 +230,31 @@ class Processor {
   startWorkerProcess() {
     let cancel: (() => void) | null = null;
     const workerLoop = async () => {
+      if (this.workerStop) {
+        throw 'worker stop';
+      }
       const shot = screenshot();
       this.worker?.postMessage(shot);
+      this.secondaryWorker?.postMessage(shot);
+      if (this.secondaryWorkerToken) {
+        await this.secondaryWorkerToken?.promise;
+        this.secondaryWorkerToken = new Token<void>();
+      }
       await sleep(this.config.workerDelay, c => cancel = c);
     };
-    this.log('worker start');
     const timeout = () => {
       workerLoop().then(timeout).catch(() => {
         cancel = null;
         this.log('worker stop');
       });
     };
-    if (this.sharedWorkerData.length) {
+    if (this.sharedWorkerData.length || this.SECONDARY_LIST.length) {
+      this.log('worker start');
+      this.workerStop = false;
       timeout();
     }
     return () => {
+      this.workerStop = true;
       typeof cancel === 'function' && cancel();
     };
   }
@@ -240,6 +269,24 @@ class Processor {
        this.log(e);
      });
    }
+  }
+  // 开启副线程（副流程）worker
+  setSecondaryProcess() {
+    if (this.SECONDARY_LIST.length) {
+      this.secondaryWorker = new Worker(resolve(__dirname, './secondary-worker.js'), {
+        workerData: this.SECONDARY_LIST,
+      });
+      this.secondaryWorker.on('message', (e) => {
+        if (e.type === 'finish') {
+          this.secondaryWorkerToken?.resolve();
+        } else if (e.type === 'keyToggle' && !this.workerStop) {
+          this.keyToggle(e.key, e.behavior);
+        } else if (e.type === 'keyTap' && !this.workerStop) {
+          robot.keyTap(e.key);
+        }
+      });
+      this.secondaryWorkerToken = new Token<void>();
+    }
   }
 }
 

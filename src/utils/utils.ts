@@ -1,3 +1,6 @@
+import { absoluteCompare, cutPicture, grayscale, lightness, rgb2hsv, textureCompare } from './math';
+import { Bitmap, CropData, PickerCondition, ProcessItem } from '../models';
+
 export function randomStr(length = 6) {
   return Math.random().toString(36).slice(2, 2 + length);
 }
@@ -39,4 +42,59 @@ export function setIn(target: any, keyPath: Array<string | number>, value: any) 
       }
     }
   }
+}
+
+export class Token<T> {
+  promise: Promise<T>;
+  resolve!: (value: T | PromiseLike<T>) => void;
+  reject!: (reason?: any) => void;
+  constructor() {
+    this.promise = new Promise<T>((resolve, reject) => {
+      this.resolve = resolve;
+      this.reject = reject;
+    });
+  }
+}
+
+export const getImageResult = (conditions: PickerCondition[], crop: CropData, bitmap: Bitmap) => {
+  return conditions.map(condition => {
+    const currentRGB = cutPicture(crop, bitmap);
+    let passed = false;
+    let value;
+    if (condition.type === 'texture') {
+      const currentGrayscale = grayscale(currentRGB);
+      const similarity = value = textureCompare(crop.grayscale!, currentGrayscale);
+      passed = condition.size === 'more' ?
+        similarity > condition.value :
+        similarity < condition.value;
+    } else if (condition.type === 'lightness') {
+      const light = value = lightness(currentRGB);
+      passed = condition.size === 'more' ?
+        light > condition.value :
+        light < condition.value;
+    } else if (condition.type === 'absolute') {
+      const hsv = rgb2hsv(currentRGB);
+      const absolute = value = absoluteCompare(crop.hsv!, hsv);
+      passed = condition.size === 'more' ?
+        absolute > condition.value :
+        absolute < condition.value;
+    }
+    return { passed, value };
+  });
+};
+
+export function elseIfPassed(current: ProcessItem, last?: ProcessItem) {
+  if (
+    last?.type === 'picker' && last.otherwise
+  ) {
+    if (last.skip || last.passed) {
+      if (current.type === 'picker' && current.otherwise) {
+        current.skip = true;
+      }
+      return false;
+    } else if (current.type === 'picker' && current.otherwise) {
+      current.skip = false;
+    }
+  }
+  return true;
 }
