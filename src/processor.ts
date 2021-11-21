@@ -74,7 +74,7 @@ class Processor {
     this.startMouseListener();
   }
 
-  async screenshot() {
+  screenshot() {
     const bitmap = screenshot();
     const buffer = getBuffer(bitmap);
     const ret = {

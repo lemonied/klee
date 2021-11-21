@@ -7,7 +7,7 @@
     "compile": "tsc",
     "start": "npm run compile && node open.js",
     "rebuild": "npm rebuild iohook --runtime=electron && electron-rebuild",
-    "package.exe": "npm run compile && node package.js --win32"
+    "package.exe": "npm run compile && node prod.js --win32"
   },
   "author": "",
   "license": "ISC",

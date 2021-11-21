@@ -5,8 +5,8 @@ import { tap } from 'rxjs';
 import { CropData } from './models';
 import { cutPicture, grayscale, rgb2hsv, average } from './utils/math';
 
-async function onScreenshot() {
-  const snapshot = await processor.screenshot();
+function onScreenshot() {
+  const snapshot = processor.screenshot();
   centralEventbus.emit('screenshot', {
     id: snapshot.id,
     timestamp: snapshot.timestamp,
@@ -94,6 +94,12 @@ function onWindowOperator(win: BrowserWindow) {
   ).subscribe();
   centralEventbus.on('close').pipe(
     tap(() => win.close()),
+  ).subscribe();
+  centralEventbus.on('maximize').pipe(
+    tap(() => win.maximize()),
+  ).subscribe();
+  centralEventbus.on('unmaximize').pipe(
+    tap(() => win.unmaximize()),
   ).subscribe();
   win.webContents.addListener('before-input-event', async (e, input) => {
     if (input.type === 'keyDown' && input.code === 'F5') {

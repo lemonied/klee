@@ -1,4 +1,3 @@
-
 export interface Bitmap {
   width: number;
   height: number;
@@ -52,12 +51,14 @@ export interface ProcessTypePicker {
   conditions: PickerCondition[];
   children: this[];
 }
+
 export interface ProcessTypeGeneral {
   type: 'general';
   key: string;
   keydown: number;
   keyup: number;
 }
+
 export interface ProcessTypeTimeout {
   type: 'timeout';
   value: number;

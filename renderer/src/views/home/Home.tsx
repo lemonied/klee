@@ -26,6 +26,7 @@ const Home: FC = () => {
   const [processState, setProcessState] = useProcessState();
   const [reading, setReading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const filename = useRef('config.json');
 
   const [config, setConfig] = useBaseConfig();
 
@@ -63,8 +64,11 @@ const Home: FC = () => {
     centralEventbus.emit('snapshot-timeout', workerDelay);
   }, [config, setConfig]);
   const download = useCallback(() => {
-    downloadJson({ data: process });
-  }, [process]);
+    downloadJson({
+      data: process,
+      config,
+    },filename.current);
+  }, [config, process]);
   const handleFileChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target?.files && e.target?.files[0];
     if (file) {
@@ -72,15 +76,17 @@ const Home: FC = () => {
       const reader = new FileReader();
       reader.onload = function() {
         const json = JSON.parse((this.result as any));
-        setProcess(fromJS(json.data) as any);
+        json.data && setProcess(fromJS(json.data) as any);
+        json.config && setConfig(json.config);
         setReading(false);
+        filename.current = file.name;
       };
       reader.onerror = function() {
         setReading(false);
       };
       reader.readAsText(file);
     }
-  }, [setProcess]);
+  }, [setConfig, setProcess]);
   const formDisabled = useMemo(() => {
     return processState || loading;
   }, [loading, processState]);
@@ -95,7 +101,7 @@ const Home: FC = () => {
         }
         <div className={'home-content'}>
           <ProcessForm disabled={formDisabled} />
-          <div style={{ textAlign: 'center' }}>
+          <div style={{ textAlign: 'center', paddingBottom: 10 }}>
             <Button type={'link'}>
               <Link to={'/about'}>关于作者</Link>
             </Button>
@@ -109,8 +115,19 @@ const Home: FC = () => {
             <Switch onChange={onLogSwitchChange} />
           </Tooltip>
           <div className={'save'}>
-            <Button size={'small'} onClick={download}>保存配置</Button>
-            <Button size={'small'} onClick={() => fileInputRef.current?.click()}>导入</Button>
+            <Button
+              size={'small'}
+              ghost
+              type={'primary'}
+              onClick={download}
+            >保存配置</Button>
+            <Button
+              size={'small'}
+              ghost
+              type={'primary'}
+              style={{ marginLeft: 5 }}
+              onClick={() => fileInputRef.current?.click()}
+            >导入</Button>
           </div>
           <div className={'config'}>
             <Tooltip
@@ -123,11 +140,13 @@ const Home: FC = () => {
                 value={config.workerDelay}
                 onChange={handleWorkerDelay}
                 addonAfter={'毫秒'}
+                disabled={formDisabled}
               />
             </Tooltip>
             <Select
               value={config.button}
               onChange={handleTriggerButton}
+              disabled={formDisabled}
             >
               <Option value={1}>左键</Option>
               <Option value={2}>右键</Option>
@@ -136,7 +155,7 @@ const Home: FC = () => {
             </Select>
             <Radio.Group
               onChange={onTriggerTypeChange}
-              defaultValue={config.type}
+              value={config.type}
               disabled={formDisabled}
             >
               <Radio value={'press'}>
