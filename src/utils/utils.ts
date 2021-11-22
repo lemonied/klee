@@ -6,7 +6,6 @@ import {
   lightness,
   rgb2hsv,
   textureCompare,
-  textureCompareInArea
 } from './math';
 import { Area, Bitmap, CropData, PickerCondition, ProcessItem } from '../models';
 import { mergeMapTo, Observable } from 'rxjs';
@@ -71,17 +70,11 @@ export const getImageResult = (conditions: PickerCondition[], crop: CropData, bi
     let passed = false;
     let value;
     if (condition.type === 'texture') {
-      if (area) {
-        const areaResult = textureCompareInArea(crop, bitmap, area, condition.value);
-        value = areaResult.value;
-        passed = areaResult.result;
-      } else {
-        const currentGrayscale = grayscale(currentRGB);
-        const similarity = value = textureCompare(crop.grayscale!, currentGrayscale);
-        passed = condition.size === 'more' ?
-          similarity > condition.value :
-          similarity < condition.value;
-      }
+      const currentGrayscale = grayscale(currentRGB);
+      const similarity = value = textureCompare(crop.grayscale!, currentGrayscale);
+      passed = condition.size === 'more' ?
+        similarity > condition.value :
+        similarity < condition.value;
     } else if (condition.type === 'lightness') {
       const light = value = lightness(currentRGB);
       passed = condition.size === 'more' ?

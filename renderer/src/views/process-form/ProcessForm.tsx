@@ -149,6 +149,7 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
   // 条件类型
   const handleConditionChange = useCallback((keyPath: any[], value: string) => {
     let target = originList;
+    target = target.deleteIn([...keyPath.slice(0, -1), 'area']);
     target = target.setIn([...keyPath, 'type'], value);
     switch (value) {
       case 'lightness':
@@ -395,6 +396,25 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
                                                             addonAfter={'%'}
                                                           />
                                                         </Tooltip>
+                                                      </>
+                                                    );
+                                                  case 'absolute':
+                                                    return (
+                                                      <>
+                                                        <Tooltip
+                                                          title={'完全相似度是将图片的颜色通道进行完全对比'}
+                                                        >
+                                                          <InputNumber
+                                                            disabled={disabled}
+                                                            style={{ width: 150 }}
+                                                            min={0}
+                                                            max={100}
+                                                            step={1}
+                                                            value={condition.get('value')}
+                                                            onChange={(value) => handleConditionValueChange([...keyPath, k, 'conditions', index], value)}
+                                                            addonAfter={'%'}
+                                                          />
+                                                        </Tooltip>
                                                         {
                                                           v.get('area') ?
                                                             (
@@ -415,23 +435,6 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
                                                             )
                                                         }
                                                       </>
-                                                    );
-                                                  case 'absolute':
-                                                    return (
-                                                      <Tooltip
-                                                        title={'完全相似度是将图片的颜色通道进行完全对比'}
-                                                      >
-                                                        <InputNumber
-                                                          disabled={disabled}
-                                                          style={{ width: 150 }}
-                                                          min={0}
-                                                          max={100}
-                                                          step={1}
-                                                          value={condition.get('value')}
-                                                          onChange={(value) => handleConditionValueChange([...keyPath, k, 'conditions', index], value)}
-                                                          addonAfter={'%'}
-                                                        />
-                                                      </Tooltip>
                                                     );
                                                   default:
                                                     return null;

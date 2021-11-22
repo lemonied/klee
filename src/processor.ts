@@ -298,8 +298,12 @@ class Processor {
        workerData: this.sharedWorkerData,
      });
      this.worker.on('message', (e) => {
-       setIn(this.PROCESS_LIST, [...e.keyPath, 'passed'], e.result);
-       this.log(e);
+       if (e.type === 'normal') {
+         setIn(this.PROCESS_LIST, [...e.keyPath, 'passed'], e.result);
+         this.log(e);
+       } else if (e.type === 'log') {
+         this.log(e.data);
+       }
      });
    }
   }

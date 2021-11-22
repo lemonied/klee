@@ -12,6 +12,7 @@ const onMessage = (bitmap: Bitmap) => {
     const v = shared[i];
     const result = getImageResult(v.conditions, v.crop, bitmap, v.area);
     parentPort?.postMessage({
+      type: 'normal',
       keyPath: v.keyPath,
       result: result.every(v => v.passed),
       value: result.map(v => v.value),
