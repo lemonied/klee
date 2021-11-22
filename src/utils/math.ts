@@ -1,4 +1,4 @@
-import { CropData, HSV, RGB, Bitmap } from '../models';
+import { CropData, HSV, RGB, Bitmap, Area } from '../models';
 
 export function average(list: number[]) {
   return list.reduce((p, c) => p + c, 0) / list.length;
@@ -25,8 +25,8 @@ export function rgb2hsv(rgb: RGB[]): HSV[] {
     const babs = b / 255;
     const max = Math.max(rabs, gabs, babs);
     const min = Math.min(rabs, gabs, babs);
-    const v = max;
-    const s = (max - min) / max;
+    const v = max * 100;
+    const s = (max - min) / max * 100;
     let h!: number;
     if (rabs === max) {
       h = (gabs - babs) / (max - min) * 60;
@@ -55,7 +55,7 @@ export function grayscale(vector: RGB[]): number[] {
 }
 
 export function lightness(rgb: RGB[]) {
-  return average(rgb2hsv(rgb).map(v => v.v));
+  return average(rgb2hsv(rgb).map(v => v.v)) / 100;
 }
 
 /**
@@ -75,7 +75,6 @@ export function cutPicture(crop: CropData, bitmap: Bitmap): RGB[] {
       const y_start = crop.top + Math.floor(perHeight * h);
       const y_end = Math.floor(crop.top + Math.floor(perHeight * (h + 1)));
       for (let i = x_start; i <= x_end; i++) {
-
         for (let j = y_start; j <= y_end; j++) {
           block.push(getRGB(bitmap, i, j));
         }
@@ -118,10 +117,44 @@ export function textureCompare(grayscale: number[], newGrayscale: number[]): num
   return 100 - Math.min(standard(grayscale, newGrayscale), 100);
 }
 
+export function textureCompareInArea(crop: CropData, bitmap: Bitmap, area: Area, expect: number) {
+  const maxX = Math.max(area.left + area.width - crop.width, area.left);
+  const maxY = Math.max(area.top + area.height - crop.height, area.top);
+  let value = 0;
+  for (let i = area.left; i <= maxX; i++) {
+    for (let j = area.top; j <= maxY; j++) {
+      const cut = cutPicture({ left: i, top: j, width: crop.width, height: crop.height }, bitmap);
+      const gray = grayscale(cut);
+      value = Math.max(value, textureCompare(crop.grayscale!, gray));
+      if (value > expect) {
+        return { value, result: true };
+      }
+    }
+  }
+  return { value, result: false };
+}
+
 export function absoluteCompare(hsv: HSV[], newHSV: HSV[]): number {
   const [h] = diffAverage(hsv.map(v => v.h), newHSV.map(v => v.h));
-  const [s] = diffAverage(hsv.map(v => v.s * 100), newHSV.map(v => v.s * 100));
-  const [v] = diffAverage(hsv.map(v => v.v * 100), newHSV.map(v => v.v * 100));
+  const [s] = diffAverage(hsv.map(v => v.s), newHSV.map(v => v.s));
+  const [v] = diffAverage(hsv.map(v => v.v), newHSV.map(v => v.v));
   const diff = (Math.abs(h) + Math.abs(s) + Math.abs(v)) / (360 + 100 + 100) * 2;
   return (1 - Math.min(diff, 1)) * 100;
+}
+
+export function absoluteCompareInArea(crop: CropData, bitmap: Bitmap, area: Area, expect: number) {
+  const maxX = Math.max(area.left + area.width - crop.width, area.left);
+  const maxY = Math.max(area.top + area.height - crop.height, area.top);
+  let value = 0;
+  for (let i = area.left; i <= maxX; i++) {
+    for (let j = area.top; j <= maxY; j++) {
+      const cut = cutPicture({ left: i, top: j, width: crop.width, height: crop.height }, bitmap);
+      const hsv = rgb2hsv(cut);
+      value = Math.max(value, absoluteCompare(crop.hsv!, hsv));
+      if (value > expect) {
+        return { value, result: true };
+      }
+    }
+  }
+  return { value, result: false };
 }

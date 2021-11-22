@@ -1,11 +1,24 @@
 import { SnapshotItem, ProcessItem, SharedWorkerData, CropData } from './models';
-import { elseIfPassed, nextTick, randomStr, setIn, sleep, Token } from './utils/utils';
+import { elseIfPassed, nextTick$, randomStr, setIn } from './utils/utils';
 import { centralEventbus } from './utils/eventbus';
 import { getBuffer, screenshot } from './picture';
 import ioHook from 'iohook';
 import robot from 'robotjs';
 import { Worker } from 'worker_threads';
 import { resolve } from 'path';
+import {
+  map,
+  mapTo,
+  mergeMap,
+  mergeMapTo,
+  MonoTypeOperatorFunction,
+  Observable,
+  of,
+  repeat,
+  Subscription,
+  tap,
+  timer,
+} from 'rxjs';
 
 class Processor {
   SNAPSHOT_HISTORY: SnapshotItem[] = [];
@@ -22,9 +35,27 @@ class Processor {
   private processCancelToken: (() => void) | null = null;
   private workerCancelToken: (() => void) | null = null;
   private worker?: Worker;
-  private workerStop = false;
   private secondaryWorker?: Worker;
-  private secondaryWorkerToken?: Token<void>;
+  private secondaryWorker$ = new Observable<void>(subscriber => {
+    const onMessage = (e: any) => {
+      if (e.type === 'finish') {
+        subscriber.next();
+      } else if (e.type === 'keyToggle') {
+        this.keyToggle(e.key, e.behavior);
+      } else if (e.type === 'keyTap') {
+        robot.keyTap(e.key);
+      } else if (e.type === 'log') {
+        this.log(e.data);
+      }
+    };
+    this.secondaryWorker?.on('message', onMessage);
+    return {
+      unsubscribe: () => {
+        this.secondaryWorker?.off('message', onMessage);
+        this.secondaryWorker?.postMessage({ type: 'shutdown' });
+      },
+    };
+  });
   private DOWN_KEYS = new Set<string>();
   constructor() {
     ioHook.on('mousedown', (e) => {
@@ -123,6 +154,7 @@ class Processor {
               keyPath: [...keyPath, i],
               crop: v.crop,
               conditions: v.conditions,
+              area: v.area,
             });
           }
           loop(v.children, [...keyPath, i, 'children']);
@@ -146,7 +178,6 @@ class Processor {
     ]);
     this.worker = undefined;
     this.secondaryWorker = undefined;
-    this.secondaryWorkerToken = undefined;
     this.cancelProcess();
     ioHook.stop();
   }
@@ -180,82 +211,84 @@ class Processor {
 
   // 开始流程循环
   startProgress() {
-    let stop: boolean | null = false;
-    let cancel: (() => void) | null = null;
-    const loop = async (list: ProcessItem[]) => {
-      if (stop) throw 'loop stop';
-      for (let i = 0; i < list.length; i++) {
-        const v = list[i];
-        const last = list[i - 1];
-        if (!elseIfPassed(v, last)) {
-          continue;
-        }
-        if (v.type === 'general' && v.key) {
-          await sleep(v.keydown, c => cancel = c);
-          if (v.keyup > 0) {
-            this.keyToggle(v.key, 'down');
-            await sleep(v.keyup, c => cancel = c);
-            this.keyToggle(v.key, 'up');
-          } else {
-            robot.keyTap(v.key);
+    const $: MonoTypeOperatorFunction<{ list: ProcessItem[]; item: ProcessItem; index: number; }> = source => {
+      return source.pipe(
+        mergeMap(result => {
+          const { item, list, index } = result;
+          const last = list[index - 1];
+          const next = list[index + 1];
+          if (index < list.length - 1 && !elseIfPassed(item, last)) {
+            return of({ item: next, list, index: index + 1 }).pipe($);
           }
-        } else if (v.type === 'picker') {
-          if (v.passed) {
-            await loop(v.children);
+          let next$: Observable<any> = of(null);
+          if (item.type === 'general' && item.key) {
+            next$ = timer(item.keydown);
+            if (item.keyup > 0) {
+              next$ = next$.pipe(
+                mergeMap(() => {
+                  this.keyToggle(item.key, 'down');
+                  return timer(item.keyup);
+                }),
+                tap(() => {
+                  this.keyToggle(item.key, 'up');
+                }),
+              );
+            } else {
+              robot.keyTap(item.key);
+            }
+          } else if (item.type === 'picker') {
+            if (item.passed && item.children.length) {
+              next$ = next$.pipe(mapTo({ list: item.children, item: item.children[0], index: 0 }), $);
+            }
+          } else if (item.type === 'timeout') {
+            next$ = next$.pipe(mergeMapTo(timer(item.value)));
           }
-        } else if (v.type === 'timeout') {
-          await sleep(v.value, c => cancel = c);
-        }
-      }
-      await nextTick();
+          if (index < list.length - 1) {
+            return next$.pipe(mergeMapTo(of({ item: next, list, index: index + 1 })), $);
+          }
+          return next$;
+        }),
+      );
     };
-    const timeout = () => {
-      loop(this.PROCESS_LIST).then(timeout).catch(error => {
-        // stop
-        this.log(error);
-        cancel = null;
-        stop = null;
-      });
-    };
+    let subscription: Subscription | undefined;
     if (this.PROCESS_LIST.length) {
-      timeout();
+      subscription = of({ list: this.PROCESS_LIST, index: 0, item: this.PROCESS_LIST[0] }).pipe(
+        $,
+        nextTick$(),
+        repeat(),
+      ).subscribe();
       this.log('start process');
     }
     return () => {
-      stop = true;
-      typeof cancel === 'function' && cancel();
+      subscription?.unsubscribe();
+      subscription = undefined;
     };
   }
   // 图像分析循环
   startWorkerProcess() {
-    let cancel: (() => void) | null = null;
-    const workerLoop = async () => {
-      if (this.workerStop) {
-        throw 'worker stop';
-      }
-      const shot = screenshot();
-      this.worker?.postMessage(shot);
-      this.secondaryWorker?.postMessage(shot);
-      if (this.secondaryWorkerToken) {
-        await this.secondaryWorkerToken?.promise;
-        this.secondaryWorkerToken = new Token<void>();
-      }
-      await sleep(this.config.workerDelay, c => cancel = c);
-    };
-    const timeout = () => {
-      workerLoop().then(timeout).catch(() => {
-        cancel = null;
-        this.log('worker stop');
-      });
-    };
+    const $ = of(null).pipe(
+      map(() => screenshot()),
+      tap(res => {
+        this.worker?.postMessage(res);
+        this.secondaryWorker?.postMessage({ type: 'screenshot', bitmap: res });
+      }),
+      mergeMap(() => {
+        if (this.SECONDARY_LIST.length && this.secondaryWorker) {
+          return this.secondaryWorker$;
+        }
+        return of(null);
+      }),
+      mergeMap(() => timer(this.config.workerDelay)),
+      repeat(),
+    );
+    let subscription: Subscription | undefined;
     if (this.sharedWorkerData.length || this.SECONDARY_LIST.length) {
       this.log('worker start');
-      this.workerStop = false;
-      timeout();
+      subscription = $.subscribe();
     }
     return () => {
-      this.workerStop = true;
-      typeof cancel === 'function' && cancel();
+      subscription?.unsubscribe();
+      subscription = undefined;
     };
   }
   // 开启多线程解析图像
@@ -276,16 +309,6 @@ class Processor {
       this.secondaryWorker = new Worker(resolve(__dirname, './secondary-worker.js'), {
         workerData: this.SECONDARY_LIST,
       });
-      this.secondaryWorker.on('message', (e) => {
-        if (e.type === 'finish') {
-          this.secondaryWorkerToken?.resolve();
-        } else if (e.type === 'keyToggle' && !this.workerStop) {
-          this.keyToggle(e.key, e.behavior);
-        } else if (e.type === 'keyTap' && !this.workerStop) {
-          robot.keyTap(e.key);
-        }
-      });
-      this.secondaryWorkerToken = new Token<void>();
     }
   }
 }

@@ -1,5 +1,15 @@
-import { absoluteCompare, cutPicture, grayscale, lightness, rgb2hsv, textureCompare } from './math';
-import { Bitmap, CropData, PickerCondition, ProcessItem } from '../models';
+import {
+  absoluteCompare,
+  absoluteCompareInArea,
+  cutPicture,
+  grayscale,
+  lightness,
+  rgb2hsv,
+  textureCompare,
+  textureCompareInArea
+} from './math';
+import { Area, Bitmap, CropData, PickerCondition, ProcessItem } from '../models';
+import { mergeMapTo, Observable } from 'rxjs';
 
 export function randomStr(length = 6) {
   return Math.random().toString(36).slice(2, 2 + length);
@@ -31,6 +41,17 @@ export function nextTick() {
   });
 }
 
+export function nextTick$() {
+  return <T>(source: Observable<T>) => {
+    return new Observable(subscriber => {
+      setImmediate(() => {
+        subscriber.next();
+        subscriber.complete();
+      });
+    }).pipe(mergeMapTo(source));
+  }
+}
+
 export function setIn(target: any, keyPath: Array<string | number>, value: any) {
   if (target) {
     const key = keyPath.splice(0, 1)[0];
@@ -44,40 +65,40 @@ export function setIn(target: any, keyPath: Array<string | number>, value: any) 
   }
 }
 
-export class Token<T> {
-  promise: Promise<T>;
-  resolve!: (value: T | PromiseLike<T>) => void;
-  reject!: (reason?: any) => void;
-  constructor() {
-    this.promise = new Promise<T>((resolve, reject) => {
-      this.resolve = resolve;
-      this.reject = reject;
-    });
-  }
-}
-
-export const getImageResult = (conditions: PickerCondition[], crop: CropData, bitmap: Bitmap) => {
+export const getImageResult = (conditions: PickerCondition[], crop: CropData, bitmap: Bitmap, area?: Area) => {
   return conditions.map(condition => {
     const currentRGB = cutPicture(crop, bitmap);
     let passed = false;
     let value;
     if (condition.type === 'texture') {
-      const currentGrayscale = grayscale(currentRGB);
-      const similarity = value = textureCompare(crop.grayscale!, currentGrayscale);
-      passed = condition.size === 'more' ?
-        similarity > condition.value :
-        similarity < condition.value;
+      if (area) {
+        const areaResult = textureCompareInArea(crop, bitmap, area, condition.value);
+        value = areaResult.value;
+        passed = areaResult.result;
+      } else {
+        const currentGrayscale = grayscale(currentRGB);
+        const similarity = value = textureCompare(crop.grayscale!, currentGrayscale);
+        passed = condition.size === 'more' ?
+          similarity > condition.value :
+          similarity < condition.value;
+      }
     } else if (condition.type === 'lightness') {
       const light = value = lightness(currentRGB);
       passed = condition.size === 'more' ?
         light > condition.value :
         light < condition.value;
     } else if (condition.type === 'absolute') {
-      const hsv = rgb2hsv(currentRGB);
-      const absolute = value = absoluteCompare(crop.hsv!, hsv);
-      passed = condition.size === 'more' ?
-        absolute > condition.value :
-        absolute < condition.value;
+      if (area) {
+        const areaResult = absoluteCompareInArea(crop, bitmap, area, condition.value);
+        value = areaResult.value;
+        passed = areaResult.result;
+      } else {
+        const hsv = rgb2hsv(currentRGB);
+        const absolute = value = absoluteCompare(crop.hsv!, hsv);
+        passed = condition.size === 'more' ?
+          absolute > condition.value :
+          absolute < condition.value;
+      }
     }
     return { passed, value };
   });

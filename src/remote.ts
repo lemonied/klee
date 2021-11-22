@@ -3,7 +3,7 @@ import { globalShortcut, app, BrowserWindow, shell } from 'electron';
 import { centralEventbus } from './utils/eventbus';
 import { tap } from 'rxjs';
 import { CropData } from './models';
-import { cutPicture, grayscale, rgb2hsv, average } from './utils/math';
+import { cutPicture, grayscale, rgb2hsv, average, lightness } from './utils/math';
 
 function onScreenshot() {
   const snapshot = processor.screenshot();
@@ -27,7 +27,7 @@ function remoteListener() {
           rgb,
           grayscale: grayScale,
           hsv,
-          lightness: parseFloat(average(hsv.map(light => light.v)).toFixed(4)),
+          lightness: parseFloat(lightness(rgb).toFixed(4)),
         };
         Object.assign(crop, imageData);
         e.event.reply('select-reply', crop);

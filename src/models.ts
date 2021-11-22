@@ -4,6 +4,13 @@ export interface Bitmap {
   image: Buffer;
 }
 
+export interface Area {
+  width: number;
+  height: number;
+  left: number;
+  top: number;
+}
+
 export interface RGB {
   r: number;
   g: number;
@@ -45,6 +52,7 @@ export interface PickerCondition {
 export interface ProcessTypePicker {
   type: 'picker';
   crop?: CropData;
+  area?: Area;
   passed?: boolean;
   skip?: boolean;
   otherwise: boolean;
@@ -70,4 +78,5 @@ export interface SharedWorkerData {
   keyPath: Array<number | string>;
   crop: CropData;
   conditions: PickerCondition[];
+  area?: Area;
 }

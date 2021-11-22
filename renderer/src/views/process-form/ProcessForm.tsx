@@ -14,6 +14,7 @@ import {
   AutoComplete,
   Tooltip,
   Checkbox,
+  Tag,
 } from 'antd';
 import {
   FileImageOutlined,
@@ -42,26 +43,37 @@ const ProcessForm: FC<Props> = (props) => {
 
   const { disabled, list, setList } = props;
   const listRef = useRef<any[]>();
+  const pickerTypeRef = useRef('normal');
 
   const modalRef = useRef<SnapshotModalInstance>();
   const pickerRef = useRef<PickerInstance>();
 
   const onPicked = useCallback((data: CropperData) => {
-    centralEventbus.emit('select', data).subscribe((res) => {
-      const crop = res.message;
-      let target = list.setIn(
-        [...listRef.current!, 'crop'],
-        Map(crop),
+    if (pickerTypeRef.current === 'normal') {
+      centralEventbus.emit('select', data).subscribe((res) => {
+        const crop = res.message;
+        let target = list.setIn(
+          [...listRef.current!, 'crop'],
+          Map(crop),
+        );
+        target = target.setIn(
+          [...listRef.current!, 'conditions'],
+          fromJS([{ type: 'lightness', value: crop.lightness, size: 'more' }]),
+        );
+        setList(target);
+      });
+    } else if (pickerTypeRef.current === 'area') {
+      setList(
+        list.setIn(
+          [...listRef.current!, 'area'],
+          Map({ left: data.left, top: data.top, width: data.width, height: data.height }),
+        ),
       );
-      target = target.setIn(
-        [...listRef.current!, 'conditions'],
-        fromJS([{ type: 'lightness', value: crop.lightness, size: 'more' }]),
-      );
-      setList(target);
-    });
+    }
   }, [list, setList]);
 
-  const showModal = useCallback((arr: any[]) => {
+  const showModal = useCallback((arr: any[], type = 'normal') => {
+    pickerTypeRef.current = type;
     listRef.current = arr;
     modalRef.current?.show();
   }, []);
@@ -91,7 +103,7 @@ interface FormRowProps {
   originList: List<any>;
   setList: (value: List<any>) => void;
   keyPath?: any[];
-  onShowModal?(keyPath: any[]): void;
+  onShowModal?(keyPath: any[], type?: string): void;
   disabled?: boolean;
   level?: number;
 }
@@ -199,6 +211,14 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
   const handleDeleteRow = useCallback((keyPath: any[]) => {
     setList(originList.deleteIn(keyPath));
   }, [originList, setList]);
+  const handleSelectArea = useCallback((index: number) => {
+    if (typeof onShowModal === 'function') {
+      onShowModal([...keyPath, index], 'area');
+    }
+  }, [keyPath, onShowModal]);
+  const handleDeleteArea = useCallback((index: number) => {
+    setList(originList.deleteIn([...keyPath, index, 'area']));
+  }, [keyPath, originList, setList]);
   const getKeyOptions = useCallback((keyPath: any[]) => {
     const keyOptions = keyboardMap.map(v => ({ value: v }));
     const value = originList.getIn(keyPath) as string;
@@ -250,7 +270,7 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
                         <Select
                           defaultValue={v.get('type')}
                           onChange={(e) => handleTypeChange(k, e)}
-                          disabled={disabled || !v.get('available')}
+                          disabled={disabled}
                         >
                           <Option value="general">按键</Option>
                           <Option value="picker">取色</Option>
@@ -263,7 +283,7 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
                                 return (
                                   <div className={'flex-align-center line-space'}>
                                     <AutoComplete
-                                      disabled={disabled || !v.get('available')}
+                                      disabled={disabled}
                                       placeholder={'输入按键'}
                                       value={v.get('key')}
                                       onChange={(e) => handleKeyChange([...keyPath, k], e)}
@@ -272,7 +292,7 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
                                     />
                                     <Tooltip title={`按下延迟，${v.get('keydown')}毫秒后按下${v.get('key')}`}>
                                       <InputNumber
-                                        disabled={disabled || !v.get('available')}
+                                        disabled={disabled}
                                         min={0}
                                         step={1}
                                         value={v.get('keydown')}
@@ -283,7 +303,7 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
                                     </Tooltip>
                                     <Tooltip title={`抬起延迟，${v.get('keyup')}毫秒后抬起${v.get('key')}`}>
                                       <InputNumber
-                                        disabled={disabled || !v.get('available')}
+                                        disabled={disabled}
                                         min={0}
                                         step={1}
                                         value={v.get('keyup')}
@@ -299,8 +319,8 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
                                   <div className={'flex-align-center line-space'}>
                                     <span className={'conditional-text'}>if</span>
                                     <div
-                                      onClick={() => !disabled && v.get('available') && handleShowModal(k)}
-                                      className={combineClassNames('snapshot link', disabled || !v.get('available') ? 'disabled' : null)}
+                                      onClick={() => !disabled && handleShowModal(k)}
+                                      className={combineClassNames('snapshot link')}
                                     >
                                       {
                                         v.get('crop') ?
@@ -323,7 +343,7 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
                                         v.get('conditions')?.map((condition: any, index: number) => (
                                           <div className={'condition line-space'} key={index}>
                                             <Select
-                                              disabled={disabled || !v.get('available')}
+                                              disabled={disabled}
                                               value={condition.get('type')}
                                               onChange={(e) => handleConditionChange([...keyPath, k, 'conditions', index], e)}
                                               style={{ minWidth: 100 }}
@@ -333,7 +353,7 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
                                               <Option value="absolute">完全相似度</Option>
                                             </Select>
                                             <Select
-                                              disabled={disabled || !v.get('available')}
+                                              disabled={disabled}
                                               value={condition.get('size')}
                                               onChange={(e) => handleSizeJudgment([...keyPath, k, 'conditions', index], e)}
                                             >
@@ -349,7 +369,7 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
                                                         title={'明亮度是指该裁剪区域的平均亮度，取值范围 0 ~ 1。'}
                                                       >
                                                         <InputNumber
-                                                          disabled={disabled || !v.get('available')}
+                                                          disabled={disabled}
                                                           min={0}
                                                           max={1}
                                                           step={0.0001}
@@ -360,20 +380,41 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
                                                     );
                                                   case 'texture':
                                                     return (
-                                                      <Tooltip
-                                                        title={'纹理相似度是将灰度化后（忽略色彩）的图片进行对比，一般当相似度大于70%时，则认为两张图片相似'}
-                                                      >
-                                                        <InputNumber
-                                                          disabled={disabled || !v.get('available')}
-                                                          style={{ width: 150 }}
-                                                          min={0}
-                                                          max={100}
-                                                          step={1}
-                                                          value={condition.get('value')}
-                                                          onChange={(value) => handleConditionValueChange([...keyPath, k, 'conditions', index], value)}
-                                                          addonAfter={'%'}
-                                                        />
-                                                      </Tooltip>
+                                                      <>
+                                                        <Tooltip
+                                                          title={'纹理相似度是将灰度化后（忽略色彩）的图片进行对比，一般当相似度大于70%时，则认为两张图片相似'}
+                                                        >
+                                                          <InputNumber
+                                                            disabled={disabled}
+                                                            style={{ width: 150 }}
+                                                            min={0}
+                                                            max={100}
+                                                            step={1}
+                                                            value={condition.get('value')}
+                                                            onChange={(value) => handleConditionValueChange([...keyPath, k, 'conditions', index], value)}
+                                                            addonAfter={'%'}
+                                                          />
+                                                        </Tooltip>
+                                                        {
+                                                          v.get('area') ?
+                                                            (
+                                                              <Tooltip
+                                                                title={(
+                                                                  <>
+                                                                    <div>{`left：${v.getIn(['area', 'left'])}`}</div>
+                                                                    <div>{`top：${v.getIn(['area', 'top'])}`}</div>
+                                                                    <div>{`width：${v.getIn(['area', 'width'])}`}</div>
+                                                                    <div>{`height：${v.getIn(['area', 'height'])}`}</div>
+                                                                  </>
+                                                                )}>
+                                                                <Tag color="magenta" closable={!disabled} onClose={() => handleDeleteArea(k)}>已选择区域</Tag>
+                                                              </Tooltip>
+                                                            ) :
+                                                            (
+                                                              <Button disabled={disabled} size={'small'} onClick={() => handleSelectArea(k)}>选择区域</Button>
+                                                            )
+                                                        }
+                                                      </>
                                                     );
                                                   case 'absolute':
                                                     return (
@@ -381,7 +422,7 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
                                                         title={'完全相似度是将图片的颜色通道进行完全对比'}
                                                       >
                                                         <InputNumber
-                                                          disabled={disabled || !v.get('available')}
+                                                          disabled={disabled}
                                                           style={{ width: 150 }}
                                                           min={0}
                                                           max={100}
@@ -406,7 +447,7 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
                                             title={'勾选后，当前层级的下一个流程将执行else逻辑'}
                                           >
                                             <Checkbox
-                                              disabled={disabled || !v.get('available')}
+                                              disabled={disabled}
                                               checked={v.get('otherwise')}
                                               onChange={value => handleElseChange([...keyPath, k], value)}
                                             >
@@ -421,7 +462,7 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
                               default:
                                 return (
                                   <InputNumber
-                                    disabled={disabled || !v.get('available')}
+                                    disabled={disabled}
                                     min={50}
                                     step={1}
                                     addonAfter={'毫秒'}

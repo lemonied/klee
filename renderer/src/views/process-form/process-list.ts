@@ -24,6 +24,7 @@ export const filterProcess = (processList: any[]): any[] => {
       value: v.value,
       otherwise: v.otherwise,
       conditions: v.conditions,
+      area: v.area,
       crop,
       children: v.children && filterProcess(v.children),
     };
