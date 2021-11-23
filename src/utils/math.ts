@@ -26,7 +26,7 @@ export function rgb2hsv(rgb: RGB[]): HSV[] {
     const max = Math.max(rabs, gabs, babs);
     const min = Math.min(rabs, gabs, babs);
     const v = max * 100;
-    const s = (max - min) / max * 100;
+    let s = (max - min) / max * 100;
     let h!: number;
     if (rabs === max) {
       h = (gabs - babs) / (max - min) * 60;
@@ -42,6 +42,9 @@ export function rgb2hsv(rgb: RGB[]): HSV[] {
     }
     if (isNaN(h)) {
       h = 0;
+    }
+    if (isNaN(s)) {
+      s = 100;
     }
     return { h, s, v };
   });
@@ -67,8 +70,8 @@ export function cutPicture(crop: CropData, bitmap: Bitmap): RGB[] {
   const rgb: RGB[] = [];
   const perWidth = crop.width / CUT_WIDTH;
   const perHeight = crop.height / CUT_HEIGHT;
-  for (let w = 0; w < CUT_WIDTH; w++) {
-    for (let h = 0; h < CUT_HEIGHT; h++) {
+  for (let h = 0; h < CUT_WIDTH; h++) {
+    for (let w = 0; w < CUT_HEIGHT; w++) {
       let r = 0;
       let g = 0;
       let b = 0;
@@ -76,15 +79,15 @@ export function cutPicture(crop: CropData, bitmap: Bitmap): RGB[] {
       const x_end = Math.floor(crop.left + Math.floor(perWidth * (w + 1)));
       const y_start = crop.top + Math.floor(perHeight * h);
       const y_end = Math.floor(crop.top + Math.floor(perHeight * (h + 1)));
-      const totalSize = (x_end - x_start + 1) * (y_end - y_start + 1);
-      for (let i = x_start; i <= x_end; i++) {
-        for (let j = y_start; j <= y_end; j++) {
+      for (let j = y_start; j <= y_end; j++) {
+        for (let i = x_start; i <= x_end; i++) {
           const result = getRGB(bitmap, i, j);
           r += result.r;
           g += result.g;
           b += result.b;
         }
       }
+      const totalSize = (x_end - x_start + 1) * (y_end - y_start + 1);
       rgb.push({
         r: r / totalSize,
         g: g / totalSize,
@@ -95,36 +98,35 @@ export function cutPicture(crop: CropData, bitmap: Bitmap): RGB[] {
   return rgb;
 }
 
-function diffAverage(a: number[], b: number[]): [number, number[]] {
+function hammingDistance(a: number[], b: number[]) {
   const length = Math.min(a.length, b.length);
-  const difference = [];
+  const average1 = average(a);
+  const average2 = average(b);
+  const a1 = a.map(v => v > average1 ? 1 : 0);
+  const b1 = b.map(v => v > average2 ? 1 : 0);
+  let distance = 0;
   for (let i = 0; i < length; i++) {
-    difference.push(b[i] - a[i]);
+    if (b1[i] !== a1[i]) {
+      distance += 1;
+    }
   }
-  return [average(difference), difference];
-}
-
-// 计算两组数据差值的标准差
-function standard(a: number[], b: number[]) {
-  const [aver, difference] = diffAverage(a, b);
-  if (aver === 0) {
-    return 0;
+  if (length) {
+    return distance / length;
   }
-  return Math.pow(
-    difference.reduce((previous, current) => {
-      return previous + Math.pow(current - aver, 2);
-    }, 0) / difference.length,
-    0.5,
-  );
+  return 1;
 }
 
 // 计算两组数据的相似度
 export function textureCompare(grayscale: number[], newGrayscale: number[]): number {
-  return 100 - Math.min(standard(grayscale, newGrayscale), 100);
+  return  1 - Math.min(hammingDistance(grayscale, newGrayscale), 1);
 }
 
-export function absoluteCompare(hsv: HSV[], newHSV: HSV[]): number {
-  const length = Math.max(hsv.length, newHSV.length);
+export function absoluteCompare(hsv: HSV[], newHSV: HSV[], ignores?: Array<'h' | 's' | 'v'>): number {
+  const hasH = !ignores?.includes('h');
+  const hasS = !ignores?.includes('s');
+  const hasV = !ignores?.includes('v');
+  const MAX_DIFF = (hasH ? 50 : 0) + (hasS ? 20 : 0) + (hasV ? 20 : 0);
+  const length = Math.min(hsv.length, newHSV.length);
   let totalDiff = 0;
   let total = 0;
   for (let i = 0; i < length; i++) {
@@ -134,24 +136,28 @@ export function absoluteCompare(hsv: HSV[], newHSV: HSV[]): number {
     const s2 = newHSV[i].s;
     const v1 = hsv[i].v;
     const v2 = newHSV[i].v;
-    total += 80;
+    total += MAX_DIFF;
     totalDiff += Math.pow(
-      Math.pow(h1 - h2, 2) + Math.pow(s1 - s2, 2) + Math.pow(v1 - v2, 2),
+      (hasH ? Math.pow(h1 - h2, 2) : 0) + (hasS ? Math.pow(s1 - s2, 2) : 0) + (hasV ? Math.pow(v1 - v2, 2) : 0),
       0.5,
     );
   }
-  return 1 - Math.min(totalDiff / total, 1);
+  return (1 - Math.min(totalDiff / total, 1)) * 100;
 }
 
 export function absoluteCompareInArea(crop: CropData, bitmap: Bitmap, area: Area, expect: number) {
   const maxX = Math.max(area.left + area.width - crop.width, area.left);
   const maxY = Math.max(area.top + area.height - crop.height, area.top);
+  let consoled = false;
   let value = 0;
-  for (let i = area.left; i <= maxX; i++) {
-    for (let j = area.top; j <= maxY; j++) {
+  for (let j = area.top; j <= maxY; j++) {
+    for (let i = area.left; i <= maxX; i++) {
       const cut = cutPicture({ left: i, top: j, width: crop.width, height: crop.height }, bitmap);
       const hsv = rgb2hsv(cut);
       value = Math.max(value, absoluteCompare(crop.hsv!, hsv));
+      if (isNaN(value) && !consoled) {
+        consoled = true;
+      }
       if (value > expect) {
         return { value, result: true };
       }

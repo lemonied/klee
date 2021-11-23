@@ -3,7 +3,7 @@ import { globalShortcut, app, BrowserWindow, shell } from 'electron';
 import { centralEventbus } from './utils/eventbus';
 import { tap } from 'rxjs';
 import { CropData } from './models';
-import { cutPicture, grayscale, rgb2hsv, average, lightness } from './utils/math';
+import { cutPicture, grayscale, rgb2hsv, average, lightness, absoluteCompare, textureCompare } from './utils/math';
 
 function onScreenshot() {
   const snapshot = processor.screenshot();
@@ -22,12 +22,15 @@ function remoteListener() {
       try {
         const rgb = cutPicture(crop, image.bitmap);
         const hsv = rgb2hsv(rgb);
-        const grayScale = grayscale(rgb)
+        const grayScale = grayscale(rgb);
+        const averageGray = average(grayScale);
+        const fingerprint = grayScale.map(v => v > averageGray ? 1 : 0);
         const imageData = {
           rgb,
           grayscale: grayScale,
           hsv,
           lightness: parseFloat(lightness(rgb).toFixed(4)),
+          fingerprint,
         };
         Object.assign(crop, imageData);
         e.event.reply('select-reply', crop);
@@ -79,6 +82,17 @@ function remoteListener() {
   });
   centralEventbus.on('listener-config').subscribe((e) => {
     Object.assign(processor.config, e.message);
+  });
+  centralEventbus.on('experiment-compare').subscribe((e) => {
+    const data1 = e.message.data1 as CropData;
+    const data2 = e.message.data2 as CropData;
+    let result;
+    if (e.message.type === 'absolute') {
+      result = absoluteCompare(data1.hsv!, data2.hsv!, e.message.ignores);
+    } else {
+      result = textureCompare(data1.grayscale!, data2.grayscale!);
+    }
+    e.event.reply('experiment-compare-reply', result);
   });
 }
 

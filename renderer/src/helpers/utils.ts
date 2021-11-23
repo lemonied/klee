@@ -30,3 +30,7 @@ export function downloadJson(data: any, filename: string) {
   a.click();
 }
 
+export function average(list: number[]) {
+  return list.reduce((p, c) => p + c, 0) / list.length;
+}
+

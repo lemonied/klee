@@ -142,6 +142,9 @@ const Home: FC = () => {
             <Button type={'link'}>
               <Link to={'/about'}>关于作者</Link>
             </Button>
+            <Button type={'link'}>
+              <Link to={'/experiment'}>测试</Link>
+            </Button>
           </div>
         </div>
         <div className={'process-operator'}>
