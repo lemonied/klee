@@ -14,7 +14,7 @@ import {
   of,
   Subscription,
   tap,
-  timer
+  timer,
 } from 'rxjs';
 
 const shared = workerData as ProcessItem[];

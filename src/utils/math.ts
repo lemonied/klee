@@ -115,7 +115,7 @@ function hammingDistance(a: number[], b: number[]) {
 
 // 计算两组数据的相似度
 export function textureCompare(grayscale: number[], newGrayscale: number[]): number {
-  return  1 - Math.min(hammingDistance(grayscale, newGrayscale), 1);
+  return  (1 - Math.min(hammingDistance(grayscale, newGrayscale), 1)) * 100;
 }
 
 export function absoluteCompare(hsv: HSV[], newHSV: HSV[], ignores?: Array<'h' | 's' | 'v'>): number {
