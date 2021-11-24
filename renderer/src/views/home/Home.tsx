@@ -26,6 +26,7 @@ import {
   useProcessLoading,
   useProcessState,
 } from './process-state';
+import { ProcessList } from '../../models';
 
 const { Option } = Select;
 const { TabPane } = Tabs;
@@ -97,8 +98,8 @@ const Home: FC = () => {
       const reader = new FileReader();
       reader.onload = function() {
         const json = JSON.parse((this.result as any));
-        json.data && setProcess(fromJS(json.data) as any);
-        json.secondaryData && setSecondaryList(fromJS(json.secondaryData) as any);
+        json.data && setProcess(fromJS(json.data) as ProcessList);
+        json.secondaryData && setSecondaryList(fromJS(json.secondaryData) as ProcessList);
         json.config && setConfig(json.config);
         setReading(false);
         filename.current = file.name;

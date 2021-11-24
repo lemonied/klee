@@ -350,12 +350,12 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
                                             <Tooltip
                                               title={
                                                 <>
-                                                  <div>`id：${v.getIn(['crop', 'id'])}`</div>
-                                                  <div>`left：${v.getIn(['crop', 'left'])}`</div>
-                                                  <div>`top：${v.getIn(['crop', 'top'])}`</div>
-                                                  <div>`width：${v.getIn(['crop', 'width'])}`</div>
-                                                  <div>`height：${v.getIn(['crop', 'height'])}`</div>
-                                                  <div>`明亮度：${v.getIn(['crop', 'lightness'])}`</div>
+                                                  <div>{`id：${v.getIn(['crop', 'id'])}`}</div>
+                                                  <div>{`left：${v.getIn(['crop', 'left'])}`}</div>
+                                                  <div>{`top：${v.getIn(['crop', 'top'])}`}</div>
+                                                  <div>{`width：${v.getIn(['crop', 'width'])}`}</div>
+                                                  <div>{`height：${v.getIn(['crop', 'height'])}`}</div>
+                                                  <div>{`明亮度：${v.getIn(['crop', 'lightness'])}`}</div>
                                                 </>
                                               }
                                             >
@@ -463,7 +463,11 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
                                                               </Tooltip>
                                                             ) :
                                                             (
-                                                              <Button disabled={disabled} size={'small'} onClick={() => handleSelectArea(k)}>选择区域</Button>
+                                                              <Tooltip
+                                                                title={'选择区域后，将在该区域内搜索图标，会有一定的性能消耗；不选择区域则在原图标位置进行图像比对。'}
+                                                              >
+                                                                <Button disabled={disabled} size={'small'} onClick={() => handleSelectArea(k)}>选择区域</Button>
+                                                              </Tooltip>
                                                             )
                                                         }
                                                         <Checkbox
