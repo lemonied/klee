@@ -13,16 +13,7 @@ import './index.scss';
 import { Button, Modal } from 'antd';
 import { centralEventbus } from '../../helpers/eventbus';
 import { Subscription } from 'rxjs';
-
-export interface CropperData {
-  id: string;
-  base64: string;
-  width: number;
-  height: number;
-  left: number;
-  top: number;
-  [prop: string]: any;
-}
+import { CropperData } from '../../models';
 
 interface Props {
   onSubmit?(data: CropperData): void;

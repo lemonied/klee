@@ -1,13 +1,14 @@
 import { injectStore, useBee } from '../../store/core';
 import { List } from 'immutable';
+import { ProcessItem } from '../../models';
 
-const processListToken = injectStore('processList', List<any>([]));
+const processListToken = injectStore('processList', List<ProcessItem>([]));
 
 export const useProcessList = () => {
   return useBee(processListToken);
 };
 
-const secondaryProcessListToken = injectStore('secondaryProcessList', List<any>([]));
+const secondaryProcessListToken = injectStore('secondaryProcessList', List<ProcessItem>([]));
 
 export const useSecondaryProcessList = () => {
   return useBee(secondaryProcessListToken);

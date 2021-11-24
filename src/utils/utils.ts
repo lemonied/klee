@@ -82,7 +82,7 @@ export const getImageResult = (conditions: PickerCondition[], crop: CropData, bi
         light < condition.value;
     } else if (condition.type === 'absolute') {
       if (area) {
-        const areaResult = absoluteCompareInArea(crop, bitmap, area, condition.value);
+        const areaResult = absoluteCompareInArea(crop, bitmap, area, condition.value, condition.ignores);
         value = areaResult.value;
         passed = areaResult.result;
       } else {

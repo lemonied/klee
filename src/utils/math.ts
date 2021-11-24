@@ -26,7 +26,7 @@ export function rgb2hsv(rgb: RGB[]): HSV[] {
     const max = Math.max(rabs, gabs, babs);
     const min = Math.min(rabs, gabs, babs);
     const v = max * 100;
-    let s = (max - min) / max * 100;
+    let s = max > 0 ? (max - min) / max * 100 : 100;
     let h!: number;
     if (rabs === max) {
       h = (gabs - babs) / (max - min) * 60;
@@ -42,9 +42,6 @@ export function rgb2hsv(rgb: RGB[]): HSV[] {
     }
     if (isNaN(h)) {
       h = 0;
-    }
-    if (isNaN(s)) {
-      s = 100;
     }
     return { h, s, v };
   });
@@ -145,19 +142,15 @@ export function absoluteCompare(hsv: HSV[], newHSV: HSV[], ignores?: Array<'h' |
   return (1 - Math.min(totalDiff / total, 1)) * 100;
 }
 
-export function absoluteCompareInArea(crop: CropData, bitmap: Bitmap, area: Area, expect: number) {
+export function absoluteCompareInArea(crop: CropData, bitmap: Bitmap, area: Area, expect: number, ignores: Array<'h' | 's' | 'v'> = []) {
   const maxX = Math.max(area.left + area.width - crop.width, area.left);
   const maxY = Math.max(area.top + area.height - crop.height, area.top);
-  let consoled = false;
   let value = 0;
   for (let j = area.top; j <= maxY; j++) {
     for (let i = area.left; i <= maxX; i++) {
       const cut = cutPicture({ left: i, top: j, width: crop.width, height: crop.height }, bitmap);
       const hsv = rgb2hsv(cut);
-      value = Math.max(value, absoluteCompare(crop.hsv!, hsv));
-      if (isNaN(value) && !consoled) {
-        consoled = true;
-      }
+      value = Math.max(value, absoluteCompare(crop.hsv!, hsv, ignores));
       if (value > expect) {
         return { value, result: true };
       }

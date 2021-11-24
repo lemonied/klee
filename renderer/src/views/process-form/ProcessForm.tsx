@@ -23,7 +23,7 @@ import {
 } from '@ant-design/icons';
 import { SnapshotModal, SnapshotModalInstance } from '../snapshot-modal/SnapshotModal';
 import './index.scss';
-import { Picker, PickerInstance, CropperData } from '../picker/Picker';
+import { Picker, PickerInstance } from '../picker/Picker';
 import { List, Map, fromJS } from 'immutable';
 import { centralEventbus } from '../../helpers/eventbus';
 import { combineClassNames } from '../../helpers/utils';
@@ -31,13 +31,14 @@ import { keyboardMap } from './keyboard';
 import { ReactSortable } from 'react-sortablejs';
 import { randomStr } from '../../helpers/utils';
 import { CheckboxChangeEvent } from 'antd/es/checkbox';
+import { Conditions, CropperData, Ignores, ProcessList } from '../../models';
 
 const { Option } = Select;
 
 interface Props {
   disabled?: boolean;
-  list: List<any>;
-  setList: (value: List<any>) => void;
+  list: ProcessList;
+  setList: (value: ProcessList) => void;
 }
 const ProcessForm: FC<Props> = (props) => {
 
@@ -56,10 +57,19 @@ const ProcessForm: FC<Props> = (props) => {
           [...listRef.current!, 'crop'],
           Map(crop),
         );
-        target = target.setIn(
-          [...listRef.current!, 'conditions'],
-          fromJS([{ type: 'lightness', value: crop.lightness, size: 'more' }]),
-        );
+        const conditions = target.getIn([...listRef.current!, 'conditions']) as Conditions;
+        const index = conditions?.findIndex(v => v.get('type') === 'lightness');
+        if (index > -1) {
+          target = target.setIn(
+            [...listRef.current!, 'conditions', index, 'value'],
+            crop.lightness,
+          );
+        } else if (!conditions) {
+          target = target.setIn(
+            [...listRef.current!, 'conditions'],
+            fromJS([{ type: 'lightness', value: crop.lightness, size: 'more' }]),
+          );
+        }
         setList(target);
       });
     } else if (pickerTypeRef.current === 'area') {
@@ -99,9 +109,9 @@ interface FormRowInstance {
   addRow(): void;
 }
 interface FormRowProps {
-  list: List<any>;
-  originList: List<any>;
-  setList: (value: List<any>) => void;
+  list: ProcessList;
+  originList: ProcessList;
+  setList: (value: ProcessList) => void;
   keyPath?: any[];
   onShowModal?(keyPath: any[], type?: string): void;
   disabled?: boolean;
@@ -220,6 +230,17 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
   const handleDeleteArea = useCallback((index: number) => {
     setList(originList.deleteIn([...keyPath, index, 'area']));
   }, [keyPath, originList, setList]);
+  const handleIgnoreLightness = useCallback((keyPath: any[], e: CheckboxChangeEvent) => {
+    const ignores = originList.getIn([...keyPath, 'ignores']) as Ignores;
+    const index = ignores?.indexOf('v');
+    if (index > -1) {
+      setList(originList.deleteIn([...keyPath, 'ignores', index]));
+    } else if (ignores) {
+      setList(originList.updateIn([...keyPath, 'ignores'], (updater: any) => updater.push('v')));
+    } else {
+      setList(originList.setIn([...keyPath, 'ignores'], List(['v'])));
+    }
+  }, [originList, setList]);
   const getKeyOptions = useCallback((keyPath: any[]) => {
     const keyOptions = keyboardMap.map(v => ({ value: v }));
     const value = originList.getIn(keyPath) as string;
@@ -326,8 +347,18 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
                                       {
                                         v.get('crop') ?
                                           (
-                                            <Tooltip title={`明亮度：${v.getIn(['crop', 'lightness'])}`}>
-                                              <img src={v.getIn(['crop', 'base64'])} alt="snapshot"/>
+                                            <Tooltip
+                                              title={
+                                                <>
+                                                  <div>`left：${v.getIn(['crop', 'left'])}`</div>
+                                                  <div>`top：${v.getIn(['crop', 'top'])}`</div>
+                                                  <div>`width：${v.getIn(['crop', 'width'])}`</div>
+                                                  <div>`height：${v.getIn(['crop', 'height'])}`</div>
+                                                  <div>`明亮度：${v.getIn(['crop', 'lightness'])}`</div>
+                                                </>
+                                              }
+                                            >
+                                              <img src={v.getIn(['crop', 'base64']) as string} alt="snapshot"/>
                                             </Tooltip>
                                           ) :
                                           (
@@ -341,7 +372,7 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
                                     </div>
                                     <div className={'flex-align-center line-space'}>
                                       {
-                                        v.get('conditions')?.map((condition: any, index: number) => (
+                                        v.get('conditions')?.map((condition, index) => (
                                           <div className={'condition line-space'} key={index}>
                                             <Select
                                               disabled={disabled}
@@ -434,6 +465,10 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
                                                               <Button disabled={disabled} size={'small'} onClick={() => handleSelectArea(k)}>选择区域</Button>
                                                             )
                                                         }
+                                                        <Checkbox
+                                                          checked={condition.get('ignores')?.includes('v')}
+                                                          onChange={e => handleIgnoreLightness([...keyPath, k, 'conditions', index], e)}
+                                                        >忽略亮度</Checkbox>
                                                       </>
                                                     );
                                                   default:

@@ -1,10 +1,11 @@
 import React, { FC, useCallback, useRef, useState } from 'react';
-import { CropperData, Picker, PickerInstance } from '../picker/Picker';
+import { Picker, PickerInstance } from '../picker/Picker';
 import { Button } from 'antd';
 import { Link } from 'react-router-dom';
 import './index.scss';
 import { SnapshotModal, SnapshotModalInstance } from '../snapshot-modal/SnapshotModal';
 import { centralEventbus } from '../../helpers/eventbus';
+import { CropperData } from '../../models';
 
 const Experiment: FC = () => {
   const pickerRef = useRef<PickerInstance>();
@@ -27,15 +28,17 @@ const Experiment: FC = () => {
     currentRef.current = index;
     modalRef.current?.show();
   }, []);
-  const compare = useCallback((type = 'absolute') => {
-    centralEventbus.emit('experiment-compare', {
-      type,
-      data1: image1,
-      data2: image2,
-      ignores: type === 'absolute' ? [] : undefined,
-    }).subscribe(res => {
-      setCompareResult(res.message);
-    });
+  const compare = useCallback((type = 'absolute', ignores?: string[]) => {
+    if (image1 && image2) {
+      centralEventbus.emit('experiment-compare', {
+        type,
+        data1: image1,
+        data2: image2,
+        ignores,
+      }).subscribe(res => {
+        setCompareResult(res.message);
+      });
+    }
   }, [image1, image2]);
 
   return (
@@ -45,7 +48,7 @@ const Experiment: FC = () => {
           <Link to={'/'} replace>返回首页</Link>
         </Button>
       </div>
-      <div className={'images-wrapper'}>
+      <div className={'images-wrapper flex-center'}>
         <div className={'column'}>
           <div className={'select'} onClick={() => showModal(0)}>
             {
@@ -153,11 +156,12 @@ const Experiment: FC = () => {
           }
         </div>
       </div>
-      <div>
-        <Button onClick={() => compare('absolute')}>图像对比</Button>
-        <Button onClick={() => compare('texture')}>纹理对比</Button>
+      <div style={{ marginLeft: 30 }}>
+        <Button size={'small'} onClick={() => compare('absolute')}>图像对比</Button>
+        <Button size={'small'} onClick={() => compare('absolute', ['v'])}>图像对比（忽略亮度）</Button>
+        <Button size={'small'} onClick={() => compare('texture')}>纹理对比（灰度对比）</Button>
       </div>
-      <div>{compareResult}</div>
+      <div style={{ textAlign: 'center' }}>{compareResult}</div>
       <Picker ref={pickerRef} onSubmit={handlePicker} />
       <SnapshotModal ref={modalRef} onChange={pickerRef.current?.show} />
     </div>

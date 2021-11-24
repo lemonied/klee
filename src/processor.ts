@@ -213,8 +213,7 @@ class Processor {
   startProgress() {
     const $: MonoTypeOperatorFunction<{ list: ProcessItem[]; item: ProcessItem; index: number; }> = source => {
       return source.pipe(
-        mergeMap(result => {
-          const { item, list, index } = result;
+        mergeMap(({ item, list, index }) => {
           const last = list[index - 1];
           const next = list[index + 1];
           if (index < list.length - 1 && !elseIfPassed(item, last)) {

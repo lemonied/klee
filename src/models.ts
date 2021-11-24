@@ -47,6 +47,7 @@ export interface PickerCondition {
   type: 'lightness' | 'texture' | 'absolute';
   value: number;
   size: 'more' | 'less';
+  ignores?: Array<'h' | 's' | 'v'>;
 }
 
 export interface ProcessTypePicker {
