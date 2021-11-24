@@ -350,6 +350,7 @@ const FormRow = forwardRef<FormRowInstance, FormRowProps>((props, ref) => {
                                             <Tooltip
                                               title={
                                                 <>
+                                                  <div>`id：${v.getIn(['crop', 'id'])}`</div>
                                                   <div>`left：${v.getIn(['crop', 'left'])}`</div>
                                                   <div>`top：${v.getIn(['crop', 'top'])}`</div>
                                                   <div>`width：${v.getIn(['crop', 'width'])}`</div>

@@ -62,7 +62,7 @@ const onMessage = async (data: { bitmap: Bitmap; type: string; }) => {
           if (item.children.length) {
             const imageResult = getImageResult(item.conditions, item.crop!, bitmap, item.area);
             item.passed = imageResult.every(v => v.passed);
-            parentPort?.postMessage({ type: 'log', data: imageResult });
+            parentPort?.postMessage({ type: 'log', data: { cropId: item.crop?.id, result: imageResult } });
             if (item.passed) {
               next$ = next$.pipe(mapTo({ list: item.children, item: item.children[0], index: 0 }), $);
             }
